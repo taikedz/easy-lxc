@@ -1,0 +1,10 @@
+#!/bin/bash
+
+[[ $UID -ne 0 ]] && {
+	echo You are not root
+	exit 1
+}
+
+mkdir -p /usr/local/bin
+cp bin/lx /usr/local/bin/lx
+chmod 755 /usr/local/bin/lx
