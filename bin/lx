@@ -7,6 +7,7 @@
 
 set -u
 
+DEBUGMODE=no
 NOROOT=no
 
 CONTAINERNAME=
@@ -24,8 +25,6 @@ numpat='^[0-9]+$'
 
 CLONETO=
 SNAPSHOT=
-
-DEBUGMODE=yes
 
 function uconfirm {
 	reqanswer='y|yes|Y|YES'
@@ -322,6 +321,9 @@ while [[ -n "$@" ]]; do
 		--help|-h)
 			printhelp
 			exit 0
+			;;
+		--debug)
+			DEBUGMODE=yes
 			;;
 		*)
 			CONTAINERNAME=$ARG
