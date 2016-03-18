@@ -44,6 +44,12 @@ Create a new container with
 
 	lx create mycontainer
 
+Expose ports - for example, expose the container's port `80` on the host's interface `eth1` on its port `8080`
+
+	lx use mycontainer -e eth1 8080 80
+
+The `-e` option can be used with most operations. Since it uses the `iptables` command, `sudo` permission is needed, or the command must be run as `root`.
+
 Start and stop containers
 
 	lx start mycontainer
