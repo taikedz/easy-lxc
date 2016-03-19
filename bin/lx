@@ -26,6 +26,8 @@ numpat='^[0-9]+$'
 CLONETO=
 SNAPSHOT=
 
+PASSARGS=
+
 function uconfirm {
 	reqanswer='y|yes|Y|YES'
 	read -p "[1;32m$@[0m : y/N> "
@@ -72,6 +74,21 @@ function waitcontainerip {
 			sleep 5
 		fi
 	done
+}
+
+function lx_cp {
+	CPFILES=
+	DESTDIR=
+	debuge "copying [$@]"
+	while [[ -n "$@" ]]; do
+		ARG="$1" ; shift
+		if [[ -z "$@" ]]; then
+			DESTDIR="$ARG"
+		else
+			CPFILES="$CPFILES \"$ARG\""
+		fi
+	done
+	cp "$@" "$HOME/.local/share/lxc/$CONTAINERNAME/$DESTDIR"
 }
 
 function makecontainerhost {
@@ -315,6 +332,12 @@ while [[ -n "$@" ]]; do
 		-s)
 			SNAPSHOT=-s
 			;;
+		--)
+			while [[ -n "$@" ]]; do
+				PASSARGS="$PASSARGS \"$1\""
+				shift
+			done
+			;;
 		--install)
 			DOINSTALL=yes
 			;;
@@ -388,12 +411,19 @@ elif [[ "$ACTION" = copy ]]; then
 	else
 		lxc-clone -o "$CONTAINERNAME" -n "$CLONETO"
 	fi
+elif [[ "$ACTION" = cp ]]; then
+	usecontainer
+	lx_cp $PASSARGS
 elif [[ "$ACTION" = ssh ]]; then
 	usecontainer
 	CONIP=$(getconip)
 	ssh ${CUSER}@$CONIP -p $CPORT
-elif [[ "$ACTION" = use ]] || [[ "$ACTION" = attach ]]; then
+elif [[ "$ACTION" = use ]]; then
 	usecontainer
+	attachcontainer
+elif [[ "$ACTION" = attach ]]; then
+	usecontainer
+	DOATTACH=yes
 	attachcontainer
 else
 	faile "Unknown command [$ACTION]"
