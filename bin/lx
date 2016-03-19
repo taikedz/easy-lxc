@@ -83,12 +83,16 @@ function lx_cp {
 	while [[ -n "$@" ]]; do
 		ARG="$1" ; shift
 		if [[ -z "$@" ]]; then
-			DESTDIR="$ARG"
+			DESTDIR="$(echo $ARG|sed 's// /g')"
 		else
-			CPFILES="$CPFILES \"$ARG\""
+			CPFILES="$CPFILES $ARG"
 		fi
 	done
-	cp "$@" "$HOME/.local/share/lxc/$CONTAINERNAME/$DESTDIR"
+	#debuge "$(echo "$CPFILES" | base64 -w 0 ; echo)"
+	for x in $CPFILES; do # damn multiple-escaping trailing spaces...
+		# sudo because of the user namespace. the result will be owned by nobody:nogroup
+		sudo cp "$(echo ${x# }|sed -e 's//\ /g')" "$HOME/.local/share/lxc/$CONTAINERNAME/rootfs/$DESTDIR"
+	done
 }
 
 function makecontainerhost {
@@ -300,6 +304,7 @@ ACTION=$1 ; shift
 
 while [[ -n "$@" ]]; do
 	ARG=$1 ; shift
+	debuge "Processing [$ARG]"
 	case "$ARG" in
 		-a)
 			debuge attach option
@@ -334,7 +339,8 @@ while [[ -n "$@" ]]; do
 			;;
 		--)
 			while [[ -n "$@" ]]; do
-				PASSARGS="$PASSARGS \"$1\""
+				debuge "Passing arg thru $1"
+				PASSARGS="$PASSARGS $(echo "$1"|sed -r 's/\s//g')" # passing space characters around subrountines is hell
 				shift
 			done
 			;;
@@ -349,6 +355,7 @@ while [[ -n "$@" ]]; do
 			DEBUGMODE=yes
 			;;
 		*)
+			debuge "Got container $ARG"
 			CONTAINERNAME=$ARG
 			;;
 	esac
@@ -412,6 +419,7 @@ elif [[ "$ACTION" = copy ]]; then
 		lxc-clone -o "$CONTAINERNAME" -n "$CLONETO"
 	fi
 elif [[ "$ACTION" = cp ]]; then
+	faile "not yet ready"
 	usecontainer
 	lx_cp $PASSARGS
 elif [[ "$ACTION" = ssh ]]; then
