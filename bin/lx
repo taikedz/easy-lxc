@@ -28,6 +28,99 @@ SNAPSHOT=
 
 PASSARGS=
 
+function printhelp {
+cat <<EOF
+
+LXC Wrapper by Tai Kedzierski (C) 2016
+Released under the GPLv3 (GNU General Public License v3)
+
+DESCRIPTION
+
+Easy wrapper for managing LXC containers
+
+If LXC is not installed, you will be prompted to install.
+
+Several tasks require root permissions:
+	* installation
+	* adding the container name to hosts file
+	* adding the container to IP tables forwarding rules
+
+These are normally done automatically. To turn this off, use the '-z' option
+
+
+USAGE
+
+  $(basename $0) ACTION CONTAINERNAME [OPTIONS]
+
+ACTIONS
+
+install
+	install LXC if it is not yet installed
+	offers to set up a non-privileged user
+	run again to set up a different user
+
+list
+	list the details of the specirfied container
+
+use
+	generic action, use with modifier options
+
+create
+	create the named container as a new container
+	requires a template OS name
+
+copy
+	make a copy of the container, requires named container and the "-to" option
+	the default action is to clone
+	an optional switch is the "-s" switch which will make a snapshot instead of a clone
+
+start
+	start the named container
+	use the -ephemeral flag to start an ephemeral container
+
+stop
+	stop the named container
+
+destroy
+	destroy the named container
+
+OPTIONS
+
+-t TEMPLATEOS
+	for create action
+	Name of the target OS, e.g. "ubuntu"
+-z
+	does not run steps that require root access
+
+-a
+	for start and use actions
+	attach to the console of the named container
+
+-p PORT
+	for ssh action
+	use SSH to connect to the container on this port
+
+-u USER
+	for ssh action
+	use SSH to connect to the container with this user
+
+-e iface export inport
+	operational option
+	expose the container's port (inport) to the host's port (export) on interface (iface)
+
+-to DESTCONTAINER
+	specify the name of the new container to create
+
+-s
+	a special switch for copying, which causes the action to snapshot rather than clone
+
+-ephemeral
+	a speacial flag for the start operation which causes an ephmeral instance to start
+	rather than a persistent-changes instance
+
+EOF
+}
+
 function uconfirm {
 	reqanswer='y|yes|Y|YES'
 	read -p "[1;32m$@[0m : y/N> "
@@ -148,13 +241,12 @@ function setupuser {
 	userhome=$(cat /etc/passwd|grep -P "^$myuser:"|cut -d ':' -f6)
 	[[ -z "$myuser" ]] && faile "No such user [$myuser]"
 
-	grep -P "^\s*$myuser" /etc/lxc/lxc-usernet >/dev/null && { warne "Skipping $myuser - they have already been set up." ; return ; }
-
 	# there is an issue when setting up on ecryptfs encrypted home directories
 	# https://bugs.launchpad.net/ubuntu/+source/lxc/+bug/1389305
 	if [[ $(mount | grep "$myuser" | grep ecryptfs -c) -gt 0 ]]; then
-		uconfirm "$myuser seems to be using an encrypted home folder. Their containers will not allow suid executables. Install workaround at /var/nocryptlxc?" && {
-			$nclxcd="/var/nocryptlxc/$myuser"
+		uconfirm "$myuser seems to be using an encrypted home folder. Their containers will not allow suid executables. Install workaround under /var/nocryptlxc?" && {
+			nclxcd="/var/nocryptlxc/$myuser"
+			[[ -d "$nclxcd" ]] && { warne "nocrypt directory for $myuser already exists. Abort" ; return ; }
 			mkdir -p "$nclxcd"
 
 			[[ -d "$userhome/.config/lxc" ]] && mv "$userhome/.config/lxc" "$nclxcd/config"
@@ -170,10 +262,10 @@ function setupuser {
 	[[ ! -e "$userhome/.config/lxc" ]] && mkdir -p "$userhome/.config/lxc"
 	chown -R $myuser:$myuser "$userhome/.config/lxc"
 
-	echo "$myuser veth lxcbr0 10" >> /etc/lxc/lxc-usernet
-	cp /etc/lxc/default.conf "$userhome/.config/lxc/"
+	grep -P "^\s*$myuser" /etc/lxc/lxc-usernet >/dev/null || echo "$myuser veth lxcbr0 10" >> /etc/lxc/lxc-usernet
+	cp -n /etc/lxc/default.conf "$userhome/.config/lxc/"
 	chown $myuser:$myuser "$userhome/.config/lxc/default.conf"
-	cat <<EOF >> "$userhome/.config/lxc/default.conf"
+	grep 'lxc.id_map = ' "$userhome/.config/lxc/default.conf" || cat <<EOF >> "$userhome/.config/lxc/default.conf"
 
 lxc.id_map = u 0 $(cat /etc/subuid |grep $myuser| awk -F ':' '{print $2,$3}')
 lxc.id_map = g 0 $(cat /etc/subgid |grep $myuser| awk -F ':' '{print $2,$3}')
@@ -186,98 +278,6 @@ EOF
 	chmod o+x $userhome/.local/share/lxc
 }
 
-function printhelp {
-cat <<EOF
-
-LXC Wrapper by Tai Kedzierski (C) 2016
-Released under the GPLv3 (GNU General Public License v3)
-
-DESCRIPTION
-
-Easy wrapper for managing LXC containers
-
-If LXC is not installed, you will be prompted to install.
-
-Several tasks require root permissions:
-	* installation
-	* adding the container name to hosts file
-	* adding the container to IP tables forwarding rules
-
-These are normally done automatically. To turn this off, use the '-z' option
-
-
-USAGE
-
-  $(basename $0) ACTION CONTAINERNAME [OPTIONS]
-
-ACTIONS
-
-install
-	install LXC if it is not yet installed
-	offers to set up a non-privileged user
-	run again to set up a different user
-
-list
-	list the details of the specirfied container
-
-use
-	generic action, use with modifier options
-
-create
-	create the named container as a new container
-	requires a template OS name
-
-copy
-	make a copy of the container, requires named container and the "-to" option
-	the default action is to clone
-	an optional switch is the "-s" switch which will make a snapshot instead of a clone
-
-start
-	start the named container
-	use the -ephemeral flag to start an ephemeral container
-
-stop
-	stop the named container
-
-destroy
-	destroy the named container
-
-OPTIONS
-
--t TEMPLATEOS
-	for create action
-	Name of the target OS, e.g. "ubuntu"
--z
-	does not run steps that require root access
-
--a
-	for start and use actions
-	attach to the console of the named container
-
--p PORT
-	for ssh action
-	use SSH to connect to the container on this port
-
--u USER
-	for ssh action
-	use SSH to connect to the container with this user
-
--e iface export inport
-	operational option
-	expose the container's port (inport) to the host's port (export) on interface (iface)
-
--to DESTCONTAINER
-	specify the name of the new container to create
-
--s
-	a special switch for copying, which causes the action to snapshot rather than clone
-
--ephemeral
-	a speacial flag for the start operation which causes an ephmeral instance to start
-	rather than a persistent-changes instance
-
-EOF
-}
 
 for x in $@; do
 	case "$x" in
