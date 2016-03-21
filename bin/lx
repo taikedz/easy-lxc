@@ -59,7 +59,7 @@ install
 	offers to set up a non-privileged user
 	run again to set up a different user
 
-list
+info
 	list the details of the specirfied container
 
 use
@@ -396,9 +396,9 @@ elif [[ "$ACTION" = start ]]; then
 	makecontainerhost
 	debuge "Attaching container"
 	attachcontainer
-elif [[ "$ACTION" = list ]]; then
-	lxc-ls --fancy | head -n 2
-	lxc-ls --fancy | tail -n +3 | grep "$CONTAINERNAME"
+elif [[ "$ACTION" = info ]]; then
+	usecontainer
+	lxc-info -n "$CONTAINERNAME"
 elif [[ "$ACTION" = stop ]]; then
 	usecontainer
 	removecontainerhost
