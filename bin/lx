@@ -150,6 +150,7 @@ function attachcontainer {
 
 function usecontainer {
 	lxc-ls | grep "$CONTAINERNAME" >/dev/null || faile "No such container $CONTAINERNAME"
+	exposecontainer # perform exposition when a container is confirmed
 }
 
 function getconip {
@@ -376,7 +377,6 @@ if [[ "$ACTION" = install ]]; then
 	exit 0
 fi
 
-exposecontainer # ... not sure this is where it should really be.....
 
 if [[ -z "$CONTAINERNAME" ]]; then
 	faile "You must specify a container name"
