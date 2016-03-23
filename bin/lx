@@ -214,7 +214,7 @@ function lx_scp {
 		fi
 	done
 	
-	local DNONCE=lx_scp_$(date "+%F%T"|md5sum|awk '{print $1}')
+	local DNONCE=lx_scp_$(date "+%F%T $CONTAINERNAME $UID"|md5sum|awk '{print $1}') # collision prevention
 	mkdir /tmp/$DNONCE
 	debuge $(ls -ld /tmp/$DNONCE )
 	for x in $CPFILES; do # make softlinks to files whose names have no spaces
