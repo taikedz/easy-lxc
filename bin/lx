@@ -216,18 +216,16 @@ function lx_scp {
 	
 	local DNONCE=lx_scp_$(date "+%F%T $CONTAINERNAME $UID"|md5sum|awk '{print $1}') # collision prevention
 	mkdir /tmp/$DNONCE
-	debuge $(ls -ld /tmp/$DNONCE )
 	for x in $CPFILES; do # make softlinks to files whose names have no spaces
-		x=$(echo "$x"|base64 -di)
+		x=$(echo "$x"|base64 -di|sed -r "s|^([^/])|$PWD/\1|")
 		debuge "Processing $x"
 		# Need to specify a fuller path when the file is in current directory
 		# otherwise we get a "too many symbolic links" error
-		ln -s "$PWD/$x" /tmp/$DNONCE/$(basename "$x"|sed -r 's/[^0-9a-zA-Z_.-]+/-/g')
+		ln -s "$x" "/tmp/$DNONCE/$(basename "$x")"
 	done
 
 	# and now use globbing to copy in one go
-	debuge /tmp/$DNONCE/*
-	scp -P $CPORT /tmp/$DNONCE/* "$CUSER@$CONIP:$DESTDIR" || faile "Copy failed"
+	scp -P $CPORT /tmp/$DNONCE/* "$CUSER@$CONIP:$DESTDIR" || debuge "$(ls -l /tmp/$DNONCE )"
 	rm /tmp/$DNONCE/*
 	rmdir /tmp/$DNONCE
 }
