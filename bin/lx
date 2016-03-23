@@ -175,7 +175,16 @@ function usecontainer {
 }
 
 function getconip {
-	lxc-ls --fancy | tail -n +3|grep -P "^$CONTAINERNAME\s" | awk '{print $3}'
+	lxc-info -n "$CONTAINERNAME" |grep "IP:" | awk '{print $2}'
+}
+
+function getconhost {
+	local gHOST=$(getent hosts "${CONTAINERNAME}.lxc"|awk '{print $2}')
+	if [[ -z "$gHOST" ]]; then
+		gHOST=$(getconip)
+	fi
+	if [[ -z "$gHOST" ]]; then faile "No host ${CONTAINERNAME}.lxc nor IP for the host. Is it started?" ; fi
+	echo "$gHOST"
 }
 
 function waitcontainerip {
@@ -194,7 +203,7 @@ function waitcontainerip {
 function lx_scp {
 	CPFILES=
 	DESTDIR=
-	CONIP=$(getconip)
+	CONIP=$(getconhost)
 	debuge "copying [$@]"
 	while [[ -n "$@" ]]; do
 		ARG="$1" ; shift
@@ -211,12 +220,14 @@ function lx_scp {
 	for x in $CPFILES; do # make softlinks to files whose names have no spaces
 		x=$(echo "$x"|base64 -di)
 		debuge "Processing $x"
-		ln -s "$x" /tmp/$DNONCE/$(basename "$x"|sed -r 's/[^0-9a-zA-Z_.-]+/-/g')
+		# Need to specify a fuller path when the file is in current directory
+		# otherwise we get a "too many symbolic links" error
+		ln -s "$PWD/$x" /tmp/$DNONCE/$(basename "$x"|sed -r 's/[^0-9a-zA-Z_.-]+/-/g')
 	done
 
 	# and now use globbing to copy in one go
 	debuge /tmp/$DNONCE/*
-	scp -P $CPORT /tmp/$DNONCE/* "$CUSER@$CONIP:$DESTDIR"
+	scp -P $CPORT /tmp/$DNONCE/* "$CUSER@$CONIP:$DESTDIR" || faile "Copy failed"
 	rm /tmp/$DNONCE/*
 	rmdir /tmp/$DNONCE
 }
@@ -457,7 +468,7 @@ elif [[ "$ACTION" = scp ]]; then
 	lx_scp $PASSARGS
 elif [[ "$ACTION" = ssh ]]; then
 	usecontainer
-	CONIP=$(getconip)
+	CONIP=$(getconhost)
 	ssh ${CUSER}@$CONIP -p $CPORT
 elif [[ "$ACTION" = use ]]; then
 	usecontainer
