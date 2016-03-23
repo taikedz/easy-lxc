@@ -26,6 +26,7 @@ numpat='^[0-9]+$'
 CLONETO=
 SNAPSHOT=
 
+# PASSARGS will always contain base64-encoded arguments. Because space-escaping.
 PASSARGS=
 
 function printhelp {
@@ -165,28 +166,39 @@ function waitcontainerip {
 			echo "$CONIP"
 			return
 		else
-			sleep 5
+			sleep 1
 		fi
 	done
 }
 
-function lx_cp {
+function lx_scp {
 	CPFILES=
 	DESTDIR=
+	CONIP=$(getconip)
 	debuge "copying [$@]"
 	while [[ -n "$@" ]]; do
 		ARG="$1" ; shift
 		if [[ -z "$@" ]]; then
-			DESTDIR="$(echo $ARG|sed 's// /g')"
+			DESTDIR="$(echo $ARG|base64 -di)"
 		else
 			CPFILES="$CPFILES $ARG"
 		fi
 	done
-	#debuge "$(echo "$CPFILES" | base64 -w 0 ; echo)"
-	for x in $CPFILES; do # damn multiple-escaping trailing spaces...
-		# sudo because of the user namespace. the result will be owned by nobody:nogroup
-		sudo cp "$(echo ${x# }|sed -e 's//\ /g')" "$HOME/.local/share/lxc/$CONTAINERNAME/rootfs/$DESTDIR"
+	
+	local DNONCE=lx_scp_$(date "+%F%T"|md5sum|awk '{print $1}')
+	mkdir /tmp/$DNONCE
+	debuge $(ls -ld /tmp/$DNONCE )
+	for x in $CPFILES; do # make softlinks to files whose names have no spaces
+		x=$(echo "$x"|base64 -di)
+		debuge "Processing $x"
+		ln -s "$x" /tmp/$DNONCE/$(basename "$x"|sed -r 's/[^0-9a-zA-Z_.-]+/-/g')
 	done
+
+	# and now use globbing to copy in one go
+	debuge /tmp/$DNONCE/*
+	scp -P $CPORT /tmp/$DNONCE/* "$CUSER@$CONIP:$DESTDIR"
+	rm /tmp/$DNONCE/*
+	rmdir /tmp/$DNONCE
 }
 
 function makecontainerhost {
@@ -343,7 +355,7 @@ while [[ -n "$@" ]]; do
 		--)
 			while [[ -n "$@" ]]; do
 				debuge "Passing arg thru $1"
-				PASSARGS="$PASSARGS $(echo "$1"|sed -r 's/\s//g')" # passing space characters around subrountines is hell
+				PASSARGS="$PASSARGS $(echo "$1"|base64 -w 0)" # passing space characters around subrountines is hell
 				shift
 			done
 			;;
@@ -420,10 +432,9 @@ elif [[ "$ACTION" = copy ]]; then
 	else
 		lxc-clone -o "$CONTAINERNAME" -n "$CLONETO"
 	fi
-elif [[ "$ACTION" = cp ]]; then
-	faile "not yet ready"
+elif [[ "$ACTION" = scp ]]; then
 	usecontainer
-	lx_cp $PASSARGS
+	lx_scp $PASSARGS
 elif [[ "$ACTION" = ssh ]]; then
 	usecontainer
 	CONIP=$(getconip)
