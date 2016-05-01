@@ -240,7 +240,7 @@ function makecontainerhost {
 	debuge "Adding $CONIP $CONTAINERNAME to hosts file"
 	# not using the mysu routine because of multiple nested commands and quotes... FIXME use arrays
 	[[ "$NOROOT" = yes ]] || {
-		ufconfirm "Auto configure host $CONIP $CONTAINERNAME ?" &&
+		uconfirm "Auto configure host $CONIP $CONTAINERNAME ?" &&
 		  sudo su -c "echo '$CONIP $CONTAINERNAME.lxc # LXC host' >> /etc/hosts"
 	}
 }
