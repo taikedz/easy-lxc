@@ -26,7 +26,7 @@ numpat='^[0-9]+$'
 CLONETO=
 SNAPSHOT=
 
-# PASSARGS will always contain base64-encoded arguments. Because space-escaping.
+# PASSARGS will always contain base64-encoded arguments. Because space-escaping. # FIXME - use arrays
 PASSARGS=
 
 function printhelp {
@@ -232,20 +232,26 @@ function lx_scp {
 
 function makecontainerhost {
 	CONIP=$(waitcontainerip)
-	grep -P "$CONIP\s.+# LXC host" /etc/hosts && {
-		warne "Host already configured"
+	grep -P "$CONTAINERNAME.lxc\s+# LXC host" /etc/hosts && {
+		warne "Host $CONTAINERNAME.lxc already configured"
 		return
 	}
 
 	debuge "Adding $CONIP $CONTAINERNAME to hosts file"
-	# not using the mysu routine because of multiple nested commands and quotes...
-	[[ "$NOROOT" = yes ]] || sudo su -c "echo '$CONIP $CONTAINERNAME.lxc # LXC host' >> /etc/hosts"
+	# not using the mysu routine because of multiple nested commands and quotes... FIXME use arrays
+	[[ "$NOROOT" = yes ]] || {
+		ufconfirm "Auto configure host $CONIP $CONTAINERNAME ?" &&
+		  sudo su -c "echo '$CONIP $CONTAINERNAME.lxc # LXC host' >> /etc/hosts"
+	}
 }
 
 function removecontainerhost {
 	CONIP=$(waitcontainerip)
 	debuge "removing $CONIP from hosts"
-	[[ "$NOROOT" = yes ]] || sudo sed -r "/^$CONIP\s.*# LXC host\$/d" -i /etc/hosts
+	[[ "$NOROOT" = yes ]] || {
+		uconfirm "Auto-remove $CONTAINERNAME from hosts?" &&
+		  sudo sed -r "/$CONTAINERNAME.lxc\s+# LXC host\$/d" -i /etc/hosts
+	}
 	debuge "Removal peformed"
 }
 
@@ -271,10 +277,12 @@ function exposecontainer {
 	fi
 }
 
-function mysu {
+function mysu { # FIXME use arrays!
+	# declare -a calling=(your arguments "listed here")
+	# mysu "${calling[@]}"
 	if [[ "$NOROOT" = yes ]]; then return; fi
 
-	sudo $@
+	sudo "$@"
 }
 
 function setupuser {
