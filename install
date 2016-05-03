@@ -8,3 +8,5 @@
 mkdir -p /usr/local/bin
 cp bin/lx /usr/local/bin/lx
 chmod 755 /usr/local/bin/lx
+
+lx install # -- this will install a new user too
