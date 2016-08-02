@@ -20,8 +20,11 @@ CUSER=$(whoami)
 CPORT=22
 
 DOATTACH=no
-INTERFACES='^'$(ifconfig | grep -P '^[^\s]+'|cut -d' ' -f 1|xargs echo|sed 's/ /|/g')'$'
 numpat='^[0-9]+$'
+
+[[ $(type -P "ifconfig") ]] && \
+INTERFACES='^'$(ifconfig -a | awk '{printf substr($1,1,length($1)-1)} { printf "|"}')'$' || \
+INTERFACES='^'$(ip -o link | awk '{printf substr($2,1,length($2)-1)} { printf "|"}')'$';
 
 CLONETO=
 SNAPSHOT=
