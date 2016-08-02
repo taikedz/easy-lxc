@@ -23,8 +23,8 @@ DOATTACH=no
 numpat='^[0-9]+$'
 
 [[ $(type -P "ifconfig") ]] && \
-INTERFACES='^'$(ifconfig -a | awk '{printf substr($1,1,length($1)-1)} { printf "|"}')'$' || \
-INTERFACES='^'$(ip -o link | awk '{printf substr($2,1,length($2)-1)} { printf "|"}')'$';
+INTERFACES='|'$(ifconfig -a | awk '{printf substr($1,1,length($1)-1)} { printf "|"}') || \
+INTERFACES='|'$(ip -o link | awk '{printf substr($2,1,length($2)-1)} { printf "|"}');
 
 CLONETO=
 SNAPSHOT=
@@ -372,7 +372,7 @@ while [[ -n "$@" ]]; do
 			IFACE=$1 ; shift
 			EXPORT=$1 ; shift
 			INPORT=$1 ; shift
-			if [[ ! "$IFACE" =~ $INTERFACES ]] || [[ ! "$EXPORT" =~ $numpat ]] || [[ ! "$INPORT" =~ $numpat ]]; then
+            if [[ ! $IFACE =~ .*\|$INTERFACES\|.* ]] || [[ ! "$EXPORT" =~ $numpat ]] || [[ ! "$INPORT" =~ $numpat ]]; then
 				faile "Invalid interface, external port or internal port: $IFACE $EXPORT $INPORT"
 			fi
 			EXPOSURE="$EXPOSURE,$IFACE:$EXPORT:$INPORT"
