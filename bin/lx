@@ -14,14 +14,18 @@ CONTAINERNAME=
 TEMPLATEOS=download
 ACTION=
 EXPOSURE=
+BTRFS=no
 EPHEMERAL=no
 
 CUSER=$(whoami)
 CPORT=22
 
 DOATTACH=no
-INTERFACES='^'$(ifconfig | grep -P '^[^\s]+'|cut -d' ' -f 1|xargs echo|sed 's/ /|/g')'$'
 numpat='^[0-9]+$'
+
+[[ $(type -P "ifconfig") ]] && \
+INTERFACES='|'$(ifconfig -a | awk '{printf substr($1,1,length($1)-1)} { printf "|"}') || \
+INTERFACES='|'$(ip -o link | awk '{printf substr($2,1,length($2)-1)} { printf "|"}');
 
 CLONETO=
 SNAPSHOT=
@@ -69,6 +73,7 @@ use
 create
 	create the named container as a new container
 	requires a template OS name
+	use the -btrfs flag to use BTRFS subvolumes
 
 copy
 	make a copy of the container, requires named container and the "-to" option
@@ -369,7 +374,7 @@ while [[ -n "$@" ]]; do
 			IFACE=$1 ; shift
 			EXPORT=$1 ; shift
 			INPORT=$1 ; shift
-			if [[ ! "$IFACE" =~ $INTERFACES ]] || [[ ! "$EXPORT" =~ $numpat ]] || [[ ! "$INPORT" =~ $numpat ]]; then
+            if [[ ! $IFACE =~ .*\|$INTERFACES\|.* ]] || [[ ! "$EXPORT" =~ $numpat ]] || [[ ! "$INPORT" =~ $numpat ]]; then
 				faile "Invalid interface, external port or internal port: $IFACE $EXPORT $INPORT"
 			fi
 			EXPOSURE="$EXPOSURE,$IFACE:$EXPORT:$INPORT"
@@ -385,6 +390,9 @@ while [[ -n "$@" ]]; do
 			;;
 		-ephemeral)
 			EPHEMERAL=yes
+			;;
+		-btrfs)
+			BTRFS=yes
 			;;
 		-s)
 			SNAPSHOT=-s
@@ -432,7 +440,11 @@ if [[ -z "$CONTAINERNAME" ]]; then
 fi
 
 if [[ "$ACTION" = create ]]; then
-	time lxc-create -n "$CONTAINERNAME" -t "$TEMPLATEOS"
+	if [[ "$BTRFS" = yes ]]; then
+		time lxc-create -B btrfs -n "$CONTAINERNAME" -t "$TEMPLATEOS" 
+	else
+		time lxc-create -n "$CONTAINERNAME" -t "$TEMPLATEOS"
+	fi
 	# this downloads from some online location... where??
 elif [[ "$ACTION" = start ]]; then
 	usecontainer
