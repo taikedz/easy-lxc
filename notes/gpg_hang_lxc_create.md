@@ -13,8 +13,3 @@ What we want for lxc-create is:
 	lxc-create -t download -n $NAME -- --keyserver 'hkp://keyserver.ubuntu.com:80'
 
 
-Other applications can suffer the same thing, notably adding PPAs on Ubuntu, and this more general workaround is what you would be needing:
-
-	mykey=$(grep ^DOWNLOAD_KEYID /usr/share/lxc/templates/lxc-download | sed -e 's/^DOWNLOAD_KEYID=//' -e 's/"//g')
-	sudo apt-key adv --keyserver http://keyserver.ubuntu.com:80/ --recv-keys $mykey
-
