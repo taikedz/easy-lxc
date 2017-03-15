@@ -1,0 +1,288 @@
+#!/bin/bash
+
+### LXC Wrapper 2 Usage:help
+#
+# lx { create | start | stop | attach | destroy } CONTAINER OPTIONS ...
+#
+# 	Standard operations
+#
+# 	create : requires a [ -t TEMPLATE ] option
+#
+# 	Other options:
+#
+# 		-p,--privileged -- assume the user is privileged
+#
+# 			lx normally prepends the command with "sudo"
+#
+#			If you want lx to always assume the user is privileged, set the environment variable
+#
+#				export LXSUDO=no
+#
+# lx CONTAINER OPTIONS ...
+#
+# 	For operations that require running containers to be ready.
+#	
+#	--expose IFACE CPORT HPORT
+#
+#		Expose container's port CPORT on host's interface IFACE on port HPORT
+#
+###/doc
+
+#!/bin/bash
+
+### printhelp Usage:bbuild
+# Write your help as documentation comments in your script
+#
+# If you need to output the help from a running script, call the
+# `printhelp` function and it will print the help documentation
+# in the current script to stdout
+#
+# A help comment looks like this:
+#
+#	### <title> Usage:help
+#	#
+#	# <some content>
+#	#
+#	# end with "###/doc" on its own line (whitespaces before
+#	# and after are OK)
+#	#
+#	###/doc
+#
+###/doc
+
+CHAR='#'
+
+function printhelp {
+	USAGESTRING=help
+	TARGETFILE=$0
+	if [[ -n "$*" ]]; then USAGESTRING="$1" ; shift; fi
+	if [[ -n "$*" ]]; then TARGETFILE="$1" ; shift; fi
+
+        echo -e "\n$(basename "$TARGETFILE")\n===\n"
+        local SECSTART='^\s*'"$CHAR$CHAR$CHAR"'\s+(.+?)\s+Usage:'"$USAGESTRING"'\s*$'
+        local SECEND='^\s*'"$CHAR$CHAR$CHAR"'\s*/doc\s*$'
+        local insec="$(mktemp --tmpdir)"; rm "$insec"
+        cat "$TARGETFILE" | while read secline; do
+                if [[ "$secline" =~ $SECSTART ]]; then
+                        touch "$insec"
+                        echo -e "\n${BASH_REMATCH[1]}\n---\n"
+                elif [[ -f $insec ]]; then
+                        if [[ "$secline" =~ $SECEND ]]; then
+                                rm "$insec"
+                        else
+				echo "$secline" | sed -r "s/^\s*$CHAR//g"
+                        fi
+                fi
+        done
+        if [[ -f "$insec" ]]; then
+                echo "WARNING: Non-terminated help block." 1>&2
+		rm "$insec"
+        fi
+	echo ""
+}
+
+### automatic help Usage:bbuild
+#
+# automatically call help if "--help" is detected in arguments
+#
+###/doc
+if [[ "$@" =~ --help ]]; then
+	printhelp
+	exit 0
+fi
+#!/bin/bash
+
+#!/bin/bash
+
+export CDEF="[0m"
+export CRED="[31m"
+export CGRN="[32m"
+export CYEL="[33m"
+export CBLU="[34m"
+export CBRED="[1;31m"
+export CBGRN="[1;32m"
+export CBYEL="[1;33m"
+export CBBLU="[1;34m"
+
+MODE_DEBUG=no
+
+### debuge MESSAGE Usage:bbuild
+# print a blue debug message to stderr
+# only prints if MODE_DEBUG is set to "yes"
+###/doc
+function debuge {
+	if [[ "$MODE_DEBUG" = yes ]]; then
+		echo -e "${CBBLU}DEBUG:$CBLU$*$CDEF" 1>&2
+	fi
+}
+
+### infoe MESSAGE Usage:bbuild
+# print a green informational message to stderr
+###/doc
+function infoe {
+	echo -e "$CGRN$*$CDEF" 1>&2
+}
+
+### warne MESSAGE Usage:bbuild
+# print a yellow warning message to stderr
+###/doc
+function warne {
+	echo -e "${CBYEL}WARN:$CYEL $*$CDEF" 1>&2
+}
+
+### faile MESSAGE CODE Usage:bbuild
+# print a red failure message to stderr and exit with CODE
+# CODE must be a number
+# if no code is specified, error code 127 is used
+###/doc
+function faile {
+	local MSG=
+	local ARG=
+	local ERCODE=127
+	local numpat='^[0-9]+$'
+	while [[ -n "$*" ]]; do
+		ARG=$1 ; shift
+		if [[ -z "$*" ]] && [[ "$ARG" =~ $numpat ]]; then
+			ERCODE=$ARG
+		else
+			MSG="$MSG $ARG"
+		fi
+	done
+	echo "${CBRED}ERROR FAIL:$CRED$MSG$CDEF" 1>&2
+	exit "$ERCODE"
+}
+
+function dumpe {
+	echo -n "[1;35m$*" 1>&2
+	echo -n "[0;35m" 1>&2
+	cat - 1>&2
+	echo -n "[0m" 1>&2
+}
+
+if [[ "$*" =~ --debug ]]; then
+	MODE_DEBUG=yes
+fi
+#!/bin/bash
+
+### Hold arguments better Usage:bbuild
+#
+# Pass arguments into a newline-delimited variable for easier processing
+#
+###/doc
+
+function args_store {
+	local argstring=
+
+	for a in "$@"; do
+		argstring="$argstring$(echo -e "\n${a}")"
+	done
+	echo "$argstring"|tail -n +2
+}
+
+function args_get {
+	local argstring="$1"; shift
+	local pat="$1"; shift
+	local next="$1"; shift
+	local tokensplus=0
+
+	if [[ -z "$next" ]]; then
+		next=0
+	elif [[ ! "$next" =~ $(echo '^[0-9]+$') ]]; then
+		faile "Invalid arg context count"
+	fi
+
+	echo "$argstring"|while read arg; do
+		if [[ "$arg" =~ ^$pat ]]; then
+			echo "$arg"
+			if [[ "$next" -gt 0 ]]; then
+				tokensplus="$next"
+			fi
+
+		elif [[ "$tokensplus" -gt 0 ]]; then
+			echo "$arg"
+			tokensplus=$(( $tokensplus - 1 ))
+		fi
+	done
+}
+
+function args_remove {
+	local argstring="$1"; shift
+	local pat="$1"; shift
+
+	echo "$argstring"|sed "/$(echo "$pat"|sed 's/\//\\\//g')/ d"
+}
+
+if [[ -z "$*" ]]; then
+	faile "Please specify an action; try lx --help"
+fi
+
+SUDOCMD=sudo
+
+# =================
+# Main argument extraction
+
+validactions="$(cat <<'EOF'
+create
+attach
+start
+stop
+destroy
+snapshot
+copy
+ls
+EOF
+)"
+
+ACTION="$(args_get "$validactions" "$1")"
+
+if [[ -n "$ACTION" ]]; then
+	# first item was an action, pop stack
+	shift
+fi
+
+CONTAINER="$1"; shift
+
+# ===================
+# Options extraction
+
+alloptions="$(args_store "$@")"
+
+EXPOSE="$(args_get "$allopts" "--expose" 3|tail -n +2)"
+
+TYPE="$(args_get "$allopts" "(--type|-t)" 1 | tail -n 1)"
+
+if [[ "${LXSUDO+x}" = nox ]] || [[ -n "$(args_get "$allopts" "(--privileged|-p)")" ]]; then
+	SUDOCMD=
+fi
+
+case "$ACTION" in
+	ls)
+		$SUDOCMD lxc-ls --fancy
+		;;
+	create)
+		if [[ -z "$TYPE" ]]; then
+			faile "Specify a type with [ -t TYPE ]"
+		fi
+		$SUDOCMD lxc-create -n "$CONTAINER" -t "$TYPE"
+		;;
+	attach)
+		$SUDOCMD lxc-attach -n "$CONTAINER"
+		;;
+	start)
+		$SUDOCMD lxc-start -n "$CONTAINER"
+		;;
+	stop)
+		$SUDOCMD lxc-stop -n "$CONTAINER"
+		;;
+	destroy)
+		$SUDOCMD lxc-destroy -n "$CONTAINER"
+		;;
+esac
+
+# %include expose.sh
+
+if [[ -n "$EXPOSE" ]]; then
+	doexpose "$EXPOSE"
+fi
+
+
