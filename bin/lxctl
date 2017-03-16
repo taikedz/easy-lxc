@@ -33,7 +33,7 @@ function printhelp {
 	exit
 }
 
-if [[ -z "$*" ]]; then
+if [[ -z "$*" ]] || [[ "$*" = "--help" ]]; then
 	printhelp
 fi
 
