@@ -1,0 +1,70 @@
+#!/bin/bash
+
+### Simple LXC controller Usage:help
+#
+# You would typically use this to perform an action on multiple containers at a time.
+# 
+#
+#
+#	[ SUDOCMD=[sudo] ] lxctl { create | destroy | start | stop } CONTAINER OPTIONS
+#
+#	[ SUDOCMD=[sudo] ] lxctl ls OPTIONS
+#
+#
+#
+# Calls the appropriate LXC action on any specified containers.
+#
+# The list of actions in the first example are a subset - the real subset is in fact any command in the lxc-* family.
+#
+# Environment variables:
+#
+# SUDOCMD - if you explicitly set this to a nil string, the actions will not use sudo
+#
+# OPTS - a string of options to be passed to each call
+#
+# 	OPTS="-t ubuntu --logfile=loghere.txt" lxctl create container1 container2
+#
+###/doc
+
+function printhelp {
+	echo -e "\033[1;35m"
+	sed "$(egrep -n '^.+Usage:' "$0"|cut -d':' -f1|head -n 1),$(grep -n '###/doc' "$0"|cut -d':' -f1|head -n 1) p" -n "$0"
+	echo -e "\033[0m"
+	exit
+}
+
+if [[ -z "$*" ]]; then
+	printhelp
+fi
+
+function faile {
+	echo -e "\033[31m$*\033[0m" >&2
+	exit
+}
+
+ACTION="$1"; shift
+
+if ! which "lxc-$ACTION" 2>/dev/null >/dev/null ; then
+	faile "No such action lxc-$ACTION"
+fi
+
+if [[ "$*" =~ --help ]]; then
+	man "lxc-$ACTION"
+	exit
+fi
+
+if [[ -z "${SUDOCMD+x}" ]]; then
+	#echo "Setting sudo"
+	SUDOCMD=sudo
+fi
+
+# Process actions that do  not take containers
+case "$ACTION" in
+	ls)
+		$SUDOCMD lxc-ls "$@"
+		exit
+		;;
+esac
+
+CONTAINER="$1"; shift
+"$SUDOCMD" "lxc-$ACTION" -n "$CONTAINER" "$@"
