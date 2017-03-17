@@ -54,6 +54,6 @@ To see or set the last used container, run
 
 This is problematic when on a corporate LAN behind a firewall that restricts outgoing requests. When a `create` operation with `-t download` is detected, `lxctl` will attempt to fix the keyserver URL by explicitly passing the request to `hkp://keyserver.ubuntu.com:80`
 
-[1] [https://tools.ietf.org/html/draft-shaw-openpgp-hkp-00](https://tools.ietf.org/html/draft-shaw-openpgp-hkp-00)
-[2] [notes/gpg_hang_lxc_create.md](notes/gpg_hang_lxc_create.md)
+* [1] [https://tools.ietf.org/html/draft-shaw-openpgp-hkp-00](https://tools.ietf.org/html/draft-shaw-openpgp-hkp-00)
+* [2] [notes/gpg_hang_lxc_create.md](notes/gpg_hang_lxc_create.md)
 
