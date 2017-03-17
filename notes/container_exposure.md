@@ -1,5 +1,7 @@
 # Exposing Containers
 
+NOTE - these steps are notes only, as implementation research; and are unrefined. Search the wider Internet for a real solution.
+
 It's a fairly simple task, albeit a bit unwieldy.
 
 You need to add a rule to your iptables chain for forwarding. The raw way to do it would be:
