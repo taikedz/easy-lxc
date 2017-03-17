@@ -2,29 +2,38 @@
 
 ### Simple LXC controller Usage:help
 #
-# You would typically use this to perform an action on multiple containers at a time.
-# 
+# This is a simple wrapper script to better facilitate using lxc. It supports providing the container name alone (rather than
+# having to insert -n when you forgot it), and implicitly filling in the container in simple situations; and automatically using
+# sudo unless explicitly switched off.
 #
 #
-#	[ SUDOCMD=[sudo] ] lxctl { create | destroy | start | stop } CONTAINER OPTIONS
+#	[ SUDOCMD=[sudo] ] lxctl { create | destroy | start | stop } [ CONTAINER [ OPTIONS ] ]
 #
 #	[ SUDOCMD=[sudo] ] lxctl ls OPTIONS
 #
+#	lxctl last [ CONTAINER ]
 #
 #
-# Calls the appropriate LXC action on any specified containers.
+# Calls the appropriate LXC action on the specified container. If CONTAINER is not specified, lxctl will attempt to use the last
+# explicitly specified container.
+#
+# You can call `lxctl last` to see the container, or provide a container name to set the container.
 #
 # The list of actions in the first example are a subset - the real subset is in fact any command in the lxc-* family.
 #
 # Environment variables:
 #
-# SUDOCMD - if you explicitly set this to a nil string, the actions will not use sudo
+#	SUDOCMD - if you explicitly set this to a nil string, the actions will not use sudo
 #
-# OPTS - a string of options to be passed to each call
+# Special considerations
 #
-# 	OPTS="-t ubuntu --logfile=loghere.txt" lxctl create container1 container2
+# -- Key Server
+# 	To work around a bug when behind stringent firewalls, any "create -t download" operation is called using hkp://keyserver.ubuntu.com:80
+# 	This is always active.
 #
 ###/doc
+
+LASTCONTAINERF=~/.config/lxctl_last
 
 function printhelp {
 	echo -e "\033[1;35m"
@@ -44,10 +53,6 @@ function faile {
 
 ACTION="$1"; shift
 
-if ! which "lxc-$ACTION" 2>/dev/null >/dev/null ; then
-	faile "No such action lxc-$ACTION"
-fi
-
 if [[ "$*" =~ --help ]]; then
 	man "lxc-$ACTION"
 	exit
@@ -58,13 +63,55 @@ if [[ -z "${SUDOCMD+x}" ]]; then
 	SUDOCMD=sudo
 fi
 
+# Set the indicator that says hey there are more options
+DOXTRAS=
+# Placeholder for added options
+EXTRAOPTS=
+
 # Process actions that do  not take containers
 case "$ACTION" in
 	ls)
 		$SUDOCMD lxc-ls "$@"
 		exit
 		;;
+	last)
+		if [[ -z "$1" ]]; then
+			cat "$LASTCONTAINERF"
+		else
+			echo "$1" > "$LASTCONTAINERF"
+		fi
+		exit
+		;;
+	create)
+		if [[ "$*" =~ "-t download" ]]; then
+			EXTRAOPTS="$EXTRAOPTS --keyserver hkp://keyserver.ubuntu.com:80"
+		fi
+		;;
 esac
 
+if ! which "lxc-$ACTION" 2>/dev/null >/dev/null ; then
+	faile "No such action lxc-$ACTION"
+fi
+
+
+# Add our own DOXTRAS token if one does not already exist in the user's args
+if [[ -n "$EXTRAOPTS" ]] && [[ ! "$*" =~ $(echo ' -- ') ]]; then
+	DOXTRAS='--'
+fi
+
 CONTAINER="$1"; shift
-"$SUDOCMD" "lxc-$ACTION" -n "$CONTAINER" "$@"
+if [[ -z "$CONTAINER" ]]; then
+	CONTAINER=$(cat "$LASTCONTAINERF")
+fi
+
+(
+	# Print out a copy of the call, for info
+	set -x
+	"$SUDOCMD" "lxc-$ACTION" -n "$CONTAINER" "$@" $DOXTRAS $EXTRAOPTS
+)
+RES=$?
+
+if [[ "$RES" = 0 ]]; then
+	echo "$CONTAINER" > "$LASTCONTAINERF"
+fi
+
