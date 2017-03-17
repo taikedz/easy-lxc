@@ -2,72 +2,58 @@
 
 Wrapper to make using LXC easy
 
-## About
+This is a simple wrapper script to better facilitate using lxc.
 
-This project supplies a single `lx` command, a bash script, through which you can perform installation of LXC, and set up un-privileged users.
+Features:
 
-Additionally, the `lx` command allows you to
-
-* Create new containers
-* start containers and automatically
-	* assign a local `/etc/hosts` entry based on the container's name
-	* expose a container's ports to an interface + port on the host
-* stop and destry containers
-* clone containers
-
-Future goals are to enable it to
-
-* manage the NAT traversal more fully
-	* allow specifying port exposition rules for the container
-	* adding and removing rules on start/stop of the container automatically
-* add more management to unprivileged users
-	* re-configure un-privileged users' quotas
-	* remove un-privilieged users
-	* configure containers for a nobody user (?)
-* move containers between users
+* providing the container name alone (rather than having to insert -n when you forgot it)
+* implicitly filling-in the container in simple situations
+* automatically using sudo unless explicitly switched off.
 
 ## Usage
 
-Copy the `bin/lx` command to an appropriate location (suggestion: `/usr/local/bin`)
+	lxctl ACTION [ CONTAINER [ OPTIONS ] ]
 
-Run with root permissions to install lxc
+Most actions are mapped to their `lxc-$ACTION` equivalent, and given the arguments
 
-	lx install
+As such:
 
-You will be asked whether to set up an unprivileged user to be able to use lxc and create containers.
+	lxctl ls --fancy
 
-To add more users, run `lxc install` again.
+Will display the fancy outptu of `lxc-ls`.
 
-For container operations, the first argument must be the action, the second must be the name of the container to operate on.
+## Additional features
 
-Create a new container with
+Still to do - port exposition. In the meantime, see notes in [exposing a container's ports out via the host](notes/container_exposure.md)
 
-	lx create mycontainer
+### Remember the last used container
 
-Expose ports - for example, expose the container's port `80` on the host's interface `eth1` on its port `8080`
+You can run `lxctl` without specifying container or options. To provide options to the subsequent commands, you can also simply specify "." in lieu of the current container.
 
-	lx use mycontainer -e eth1 8080 80
+	lxctl create testcontainer -t ubuntu
+	lxctl start
+	lxctl attach . -- apt install openssh-server
+	lxctl attach . -- ip a
+	ssh $CONTAINERIP
 
-The `-e` option can be used with most operations. Since it uses the `iptables` command, `sudo` permission is needed, or the command must be run as `root`.
+	    .... you do stuff in the container .....
+	
+	lxctl stop
+	lxctl destroy
 
-Start and stop containers
+Note that we only specified the container name in the first instance; the rest use the same container implicitly.
 
-	lx start mycontainer
-	lx stop mycontainer
+To see or set the last used container, run
 
-Starting and stopping containers will automatically try to add an appropriately-named entry to the /etc/hosts file. This requires sudo ability. To suppress this, run instead
+	lxctl last
+	lxctl last new-container-name
 
-	lx start mycontainer -z
-	lx stop mycontainer -z
+### Explicitly set a key server during `create -t download`
 
-You can connect to the container using either the attach command to get a root session
+`lxc-create` has a defect in that it tries to query a key server on a non-officialized port when using the `download` template.
 
-	lx attach mycontainer
+This is problematic when on a corporate LAN behind a firewall that restricts outgoing requests. When a `create` operation with `-t download` is detected, `lxctl` will attempt to fix the keyserver URL by explicitly passing the request to `hkp://keyserver.ubuntu.com:80`
 
-or the ssh command to ssh to the container (if an ssh is installed and running on the container)
+[1] [https://tools.ietf.org/html/draft-shaw-openpgp-hkp-00](https://tools.ietf.org/html/draft-shaw-openpgp-hkp-00)
+[2] [notes/gpg_hang_lxc_create.md](notes/gpg_hang_lxc_create.md)
 
-	lx ssh mycontainer
-	lx ssh mycontainer -u user
-	lx ssh mycontainer -u user -p port
-
-Other commands are also available. See `lx --help` for more info.

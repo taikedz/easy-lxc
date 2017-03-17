@@ -7,7 +7,7 @@
 # sudo unless explicitly switched off.
 #
 #
-#	[ SUDOCMD=[sudo] ] lxctl { create | destroy | start | stop } [ CONTAINER [ OPTIONS ] ]
+#	[ SUDOCMD=[sudo] ] lxctl { create | destroy | start | stop } [ { CONTAINER | "." } [ OPTIONS ] ]
 #
 #	[ SUDOCMD=[sudo] ] lxctl ls OPTIONS
 #
@@ -18,6 +18,8 @@
 # explicitly specified container.
 #
 # You can call `lxctl last` to see the container, or provide a container name to set the container.
+#
+# You can use "." as the name of a container to specifically use the last-used container.
 #
 # The list of actions in the first example are a subset - the real subset is in fact any command in the lxc-* family.
 #
@@ -100,7 +102,7 @@ if [[ -n "$EXTRAOPTS" ]] && [[ ! "$*" =~ $(echo ' -- ') ]]; then
 fi
 
 CONTAINER="$1"; shift
-if [[ -z "$CONTAINER" ]]; then
+if [[ -z "$CONTAINER" ]] || [[ "$CONTAINER" = '.' ]]; then
 	CONTAINER=$(cat "$LASTCONTAINERF")
 fi
 

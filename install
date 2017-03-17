@@ -6,7 +6,6 @@
 }
 
 mkdir -p /usr/local/bin
-cp bin/lx /usr/local/bin/lx
-chmod 755 /usr/local/bin/lx
+cp bin/lxctl /usr/local/bin/lxctl
+chmod 755 /usr/local/bin/lxctl
 
-lx install # -- this will install a new user too
