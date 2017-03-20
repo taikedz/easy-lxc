@@ -30,10 +30,12 @@
 # Special considerations
 #
 # -- Key Server
-# 	To work around a bug when behind stringent firewalls, any "create -t download" operation is called using hkp://keyserver.ubuntu.com:80
-# 	This is always active.
+# 	To work around a bug when behind stringent firewalls, any "create -t download" operation is called using a keyserver on port 80
+# 	This is always active. You can override which key server is used by setting DOWNLOAD_KEYSERVER in your environment
 #
 ###/doc
+
+set -eu
 
 LASTCONTAINERF=~/.config/lxctl_last
 
@@ -70,6 +72,9 @@ DOXTRAS=
 # Placeholder for added options
 EXTRAOPTS=
 
+# Only set if not yet set
+: ${DOWNLOAD_KEYSERVER="hkp://p80.pool.sks-keyservers.net:80"}
+
 # Process actions that do  not take containers
 case "$ACTION" in
 	ls)
@@ -86,7 +91,7 @@ case "$ACTION" in
 		;;
 	create)
 		if [[ "$*" =~ "-t download" ]]; then
-			EXTRAOPTS="$EXTRAOPTS --keyserver hkp://p80.pool.sks-keyservers.net:80"
+			EXTRAOPTS="$EXTRAOPTS --keyserver $DOWNLOAD_KEYSERVER"
 		fi
 		;;
 esac

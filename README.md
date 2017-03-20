@@ -50,10 +50,11 @@ To see or set the last used container, run
 
 ### Explicitly set a key server during `create -t download`
 
-`lxc-create` has a defect in that it tries to query a key server on a non-officialized port when using the `download` template.
+The download template has a defect in that it tries to query a key server on a non-officialized port.
 
-This is problematic when on a corporate LAN behind a firewall that restricts outgoing requests. When a `create` operation with `-t download` is detected, `lxctl` will attempt to fix the keyserver URL by explicitly passing the request to `hkp://keyserver.ubuntu.com:80`
+This is problematic when on a corporate LAN behind a firewall that restricts outgoing requests. When the use of the `download` template is detected, `lxctl` will attempt to fix the keyserver URL by explicitly passing the request to `hkp://p80.pool.sks-keyservers.com:80`. You can override this in your environment by setting the `DOWNLOAD_KEYSERVER` variable. This has been merged upstream [3]
 
 * [1] [https://tools.ietf.org/html/draft-shaw-openpgp-hkp-00](https://tools.ietf.org/html/draft-shaw-openpgp-hkp-00)
 * [2] [notes/gpg_hang_lxc_create.md](notes/gpg_hang_lxc_create.md)
+* [3] [https://github.com/lxc/lxc/pull/1473](https://github.com/lxc/lxc/pull/1473)
 
