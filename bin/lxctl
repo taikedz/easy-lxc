@@ -86,7 +86,7 @@ case "$ACTION" in
 		;;
 	create)
 		if [[ "$*" =~ "-t download" ]]; then
-			EXTRAOPTS="$EXTRAOPTS --keyserver hkp://keyserver.ubuntu.com:80"
+			EXTRAOPTS="$EXTRAOPTS --keyserver hkp://p80.pool.sks-keyservers.net:80"
 		fi
 		;;
 esac
