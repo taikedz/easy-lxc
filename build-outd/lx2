@@ -2,10 +2,6 @@
 
 ### LXC Wrapper 2 Usage:help
 #
-# lx
-#
-#	Simply lists the containers using `lxc-ls --fancy`
-#
 # lx { create | start | stop | attach | destroy } CONTAINER OPTIONS ...
 #
 # 	Standard operations
@@ -85,7 +81,7 @@ function printhelp {
 	echo ""
 }
 
-### automatic help Usage:main
+### automatic help Usage:bbuild
 #
 # automatically call help if "--help" is detected in arguments
 #
@@ -94,42 +90,19 @@ if [[ "$@" =~ --help ]]; then
 	printhelp
 	exit 0
 fi
-
 #!/bin/bash
 
 #!/bin/bash
-
-### Colours for bash Usage:bbuild
-# A series of colour flags for use in outputs.
-#
-# Example:
-# 	
-# 	echo "${CRED}Some red text ${CBBLU} some blue text $CDEF some text in the terminal's default colour"
-#
-# Colours available:
-#
-# CDEF -- switches to the terminal default
-#
-# CRED, CBRED -- red and bright/bold red
-# CGRN, CBGRN -- green and bright/bold green
-# CYEL, CBYEL -- yellow and bright/bold yellow
-# CBLU, CBBLU -- blue and bright/bold blue
-# CPUR, CBPUR -- purple and bright/bold purple
-#
-###/doc
 
 export CDEF="[0m"
 export CRED="[31m"
 export CGRN="[32m"
 export CYEL="[33m"
 export CBLU="[34m"
-export CPUR="[35m"
 export CBRED="[1;31m"
 export CBGRN="[1;32m"
 export CBYEL="[1;33m"
 export CBBLU="[1;34m"
-export CBPUR="[1;35m"
-
 
 MODE_DEBUG=no
 
@@ -186,50 +159,14 @@ function dumpe {
 	echo -n "[0m" 1>&2
 }
 
-### Auto debug Usage:main
-# When included, bashout processes a special "--debug" flag
-#
-# It does not remove the debug flag from arguments.
-###/doc
-
 if [[ "$*" =~ --debug ]]; then
 	MODE_DEBUG=yes
 fi
-
 #!/bin/bash
 
-### A more usable arguments manipulator Usage:bbuild
+### Hold arguments better Usage:bbuild
 #
 # Pass arguments into a newline-delimited variable for easier processing
-#
-# args_store ARGS ...
-#
-# 	Echoes each argument on its own line; this echoed string is an ARGSTRING
-#
-# args_get ARGSTRING PAT [ N ]
-#
-# 	Prints any line in ARGSTRING that matches PAT at the start
-#
-# 	If N is specified as an integer, prints that many subsequent tokens
-#
-# args_remove ARGSTRING PAT [ N ]
-#
-# 	Remove any lines in the arguments string matchinig PAT at their start
-#
-# 	If N is specified as an integer, removes that many subsequent tokens
-#
-# EXAMPLE
-# =======
-#
-#
-# 	myargs=$(args_store "$@")
-#
-# 	# Use a dollar sign to terminate the pattern
-# 	files="$(args_get "$myargs" -f$ 1)"
-#
-# 	# Take away the arguments we have already extracted
-# 	# and store them in the old variable
-# 	myargs="$(args_remove "$myargs" -f$ 1)"
 #
 ###/doc
 
@@ -245,8 +182,7 @@ function args_store {
 function args_get {
 	local argstring="$1"; shift
 	local pat="$1"; shift
-	local next=
-	if [[ -n "$*" ]]; then next="$1"; shift; fi
+	local next="$1"; shift
 	local tokensplus=0
 
 	if [[ -z "$next" ]]; then
@@ -272,43 +208,15 @@ function args_get {
 function args_remove {
 	local argstring="$1"; shift
 	local pat="$1"; shift
-	local next=
-	if [[ -n "$*" ]]; then next="$1"; shift; fi
-	local tokensplus=0
 
-	if [[ -z "$pat" ]]; then
-		# return idem
-		echo "$argstring"
-		return
-	fi
-
-	if [[ -z "$next" ]]; then
-		next=0
-	elif [[ ! "$next" =~ $(echo '^[0-9]+$') ]]; then
-		faile "Invalid arg context count"
-	fi
-
-	echo "$argstring"|while read arg; do
-		if [[ "$arg" =~ ^$pat ]]; then
-			if [[ "$next" -gt 0 ]]; then
-				tokensplus="$next"
-			fi
-
-		elif [[ "$tokensplus" -gt 0 ]]; then
-			tokensplus=$(( $tokensplus - 1 ))
-		else
-			echo "$arg"
-		fi
-	done
+	echo "$argstring"|sed "/$(echo "$pat"|sed 's/\//\\\//g')/ d"
 }
 
+if [[ -z "$*" ]]; then
+	faile "Please specify an action; try lx --help"
+fi
 
 SUDOCMD=sudo
-
-if [[ -z "$*" ]]; then
-	lxc-ls --fancy
-	exit
-fi
 
 # =================
 # Main argument extraction
@@ -321,6 +229,7 @@ stop
 destroy
 snapshot
 copy
+ls
 EOF
 )"
 
@@ -347,6 +256,9 @@ if [[ "${LXSUDO+x}" = nox ]] || [[ -n "$(args_get "$allopts" "(--privileged|-p)"
 fi
 
 case "$ACTION" in
+	ls)
+		$SUDOCMD lxc-ls --fancy
+		;;
 	create)
 		if [[ -z "$TYPE" ]]; then
 			faile "Specify a type with [ -t TYPE ]"
@@ -367,7 +279,7 @@ case "$ACTION" in
 		;;
 esac
 
-
+# %include expose.sh
 
 if [[ -n "$EXPOSE" ]]; then
 	doexpose "$EXPOSE"
