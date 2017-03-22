@@ -1,0 +1,102 @@
+#!/bin/bash
+
+set -euo pipefail
+
+#- Easily add configurations to a named container's configuration file
+#-
+#- 	lxconfig CONTAINER CTEMPLATE ...
+#-
+
+# Need to find how to locate this
+CONTAINERDIR=/var/lib/lxc
+
+: ${LXCONFIGS="$HOME/.local/lib/lxctl/configs:/usr/local/lib/lxctl/configs"}
+: ${SUDOCMD=sudo}
+
+function splitout {
+	echo "$1"|sed 's/:/\n/g'
+}
+
+function filefrompath {
+	local FILENAME="$1"; shift
+
+	for path in $(splitout "$LXCONFIGS"); do
+		local targetfile="$path/$FILENAME"
+		if [[ -f "$targetfile" ]]; then
+			echo "$targetfile"
+		fi
+	done
+}
+
+function fetch_templates {
+	local TEMPLATES=
+
+	for template in "$@"; do
+		ttemplate="$(filefrompath "$template")"
+		if [[ -z "$ttemplate" ]]; then
+			echo -e "\033[31;1mCould not find template [$template]\033[0m" >&2
+			return 1
+		fi
+		TEMPLATES="$TEMPLATES:$ttemplate"
+	done
+
+	echo "$TEMPLATES"
+
+}
+
+function checklisting {
+	if [[ "$*" =~ "--list" ]]; then
+		for path in $(splitout "$LXCONFIGS"); do
+			[[ -d "$path" ]] && {
+				echo "$path >>"
+				ls "$path"
+			}
+		done
+		exit
+	fi
+}
+
+function edittemplate {
+	if [[ -n "$*" ]] && [[ "$1" = --edit ]]; then
+		shift
+		if [[ -n "$*" ]]; then
+			local template=$(fetch_templates "$1") && {
+				: ${EDITOR=nano}
+				"$EDITOR" "$template"
+			}
+		else
+			echo "No template name specified"
+		fi
+
+		exit
+	fi
+		
+}
+
+function main {
+
+	checklisting "$@"
+	
+	edittemplate "$@"
+
+	if [[ -z "$*" ]]; then
+		egrep '^#-' "$0"
+		exit
+	fi
+
+	CONTAINER="$1" ; shift
+
+	if [[ -z "$*" ]]; then
+		echo "Please specify some templates to add !" >&2
+	fi
+
+	TEMPLATES="$(fetch_templates "$@" )" || { echo "Config aborted, no changes made." >&2 ; exit 1 ; }
+
+	for template in $(splitout "$TEMPLATES"); do
+		#echo "$template - will be configured to $CONTAINERDIR/$CONTAINER/config"
+		cat "$template" | $SUDOCMD tee -a $CONTAINERDIR/$CONTAINER/config >/dev/null
+	done
+
+}
+
+main "$@"
