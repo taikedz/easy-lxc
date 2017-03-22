@@ -62,17 +62,17 @@ if [[ "$*" =~ --help ]]; then
 	exit
 fi
 
-if [[ -z "${SUDOCMD+x}" ]]; then
-	#echo "Setting sudo"
-	SUDOCMD=sudo
-fi
+# Elevation prefix
+: ${SUDOCMD=sudo}
 
-# Set the indicator that says hey there are more options
-DOXTRAS=
-# Placeholder for added options
+# Added options we may want to insert before the extra options
+PREOPTS=
+
+# Set the indicator that says hey there are extended options
+XTRATOKEN=
+# Placeholder for extended options
 EXTRAOPTS=
 
-# Only set if not yet set
 : ${DOWNLOAD_KEYSERVER="hkp://p80.pool.sks-keyservers.net:80"}
 
 # Process actions that do  not take containers
@@ -101,9 +101,9 @@ if ! which "lxc-$ACTION" 2>/dev/null >/dev/null ; then
 fi
 
 
-# Add our own DOXTRAS token if one does not already exist in the user's args
+# Add our own token if one does not already exist in the user's args
 if [[ -n "$EXTRAOPTS" ]] && [[ ! "$*" =~ $(echo ' -- ') ]]; then
-	DOXTRAS='--'
+	XTRATOKEN='--'
 fi
 
 CONTAINER="$1"; shift
@@ -114,7 +114,9 @@ fi
 (
 	# Print out a copy of the call, for info
 	set -x
-	"$SUDOCMD" "lxc-$ACTION" -n "$CONTAINER" "$@" $DOXTRAS $EXTRAOPTS
+
+	# Do not quote token and opts -- woul be safer to be able to turn them into array ...
+	"$SUDOCMD" "lxc-$ACTION" -n "$CONTAINER" "$@" $XTRATOKEN $EXTRAOPTS
 )
 RES=$?
 
