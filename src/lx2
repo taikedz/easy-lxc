@@ -32,14 +32,14 @@
 #
 ###/doc
 
-#%include autohelp.sh bashout.sh argstore.sh
-
-SUDOCMD=sudo
-
 if [[ -z "$*" ]]; then
 	lxc-ls --fancy
 	exit
 fi
+
+#%include autohelp.sh bashout.sh argstore.sh
+
+SUDOCMD=sudo
 
 # =================
 # Main argument extraction
