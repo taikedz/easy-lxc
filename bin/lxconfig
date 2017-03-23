@@ -4,13 +4,15 @@ set -euo pipefail
 
 #- Easily add configurations to a named container's configuration file
 #-
-#- 	lxconfig CONTAINER CTEMPLATE ...
+#- 	lxconfig { init | config } CONTAINER TEMPLATES ...
+#-	lxconfig list
 #-
 
 # Need to find how to locate this
 CONTAINERDIR=/var/lib/lxc
 
 : ${LXCONFIGS="$HOME/.local/lib/lxctl/configs:/usr/local/lib/lxctl/configs"}
+: ${LXINITS="$HOME/.local/lib/lxctl/inits:/usr/local/lib/lxctl/inits"}
 : ${SUDOCMD=sudo}
 
 function splitout {
@@ -19,8 +21,9 @@ function splitout {
 
 function filefrompath {
 	local FILENAME="$1"; shift
+	local SEARCHPATH="$1" ; shift
 
-	for path in $(splitout "$LXCONFIGS"); do
+	for path in $(splitout "$SEARCHPATH"); do
 		local targetfile="$path/$FILENAME"
 		if [[ -f "$targetfile" ]]; then
 			echo "$targetfile"
@@ -28,11 +31,27 @@ function filefrompath {
 	done
 }
 
+function fetch_scripts {
+	local SCRIPTS=
+
+	for script in "$@"; do
+		tscript="$(filefrompath "$script" ".:$LXINITS")"
+		if [[ -z "$tscript" ]]; then
+			echo -e "\033[31;1mCould not find template [$template]\033[0m" >&2
+			return 1
+		fi
+		SCRIPTS="$SCRIPTS:$tscript"
+	done
+
+	echo "$SCRIPTS"
+
+}
+
 function fetch_templates {
 	local TEMPLATES=
 
 	for template in "$@"; do
-		ttemplate="$(filefrompath "$template")"
+		ttemplate="$(filefrompath "$template" ".:$LXCONFIGS")"
 		if [[ -z "$ttemplate" ]]; then
 			echo -e "\033[31;1mCould not find template [$template]\033[0m" >&2
 			return 1
@@ -44,58 +63,95 @@ function fetch_templates {
 
 }
 
+function listspew {
+	local lname="$1"
+	local ldata="$2"
+	echo -e "$lname=\n${ldata//:/\\n}\n======"
+
+	for path in $(splitout "$ldata"); do
+		[[ -d "$path" ]] && {
+			echo -n "$path >> "
+			ls "$path"
+		}
+	done
+}
+
 function checklisting {
-	if [[ "$*" =~ "--list" ]]; then
-		for path in $(splitout "$LXCONFIGS"); do
-			[[ -d "$path" ]] && {
-				echo "$path >>"
-				ls "$path"
-			}
-		done
-		exit
-	fi
+	listspew LXCONFIGS "$LXCONFIGS"
+	listspew LXINITS "$LXINITS"
 }
 
-function edittemplate {
-	if [[ -n "$*" ]] && [[ "$1" = --edit ]]; then
-		shift
-		if [[ -n "$*" ]]; then
-			local template=$(fetch_templates "$1") && {
-				: ${EDITOR=nano}
-				"$EDITOR" "$template"
-			}
-		else
-			echo "No template name specified"
-		fi
-
-		exit
-	fi
-		
-}
-
-function main {
-
-	checklisting "$@"
-	
-	edittemplate "$@"
-
-	if [[ -z "$*" ]]; then
-		egrep '^#-' "$0"
-		exit
-	fi
-
-	CONTAINER="$1" ; shift
+function addtemplates {
 
 	if [[ -z "$*" ]]; then
 		echo "Please specify some templates to add !" >&2
 	fi
 
-	TEMPLATES="$(fetch_templates "$@" )" || { echo "Config aborted, no changes made." >&2 ; exit 1 ; }
+	TEMPLATES="$(fetch_templates "$@" )" || {
+		echo "Config aborted, no changes made." >&2
+		exit 1
+	}
 
 	for template in $(splitout "$TEMPLATES"); do
-		#echo "$template - will be configured to $CONTAINERDIR/$CONTAINER/config"
+		echo "$template will be added to $CONTAINERDIR/$CONTAINER/config"
+		
 		cat "$template" | $SUDOCMD tee -a $CONTAINERDIR/$CONTAINER/config >/dev/null
 	done
+}
+
+function checkhelp {
+	if [[ -z "$*" ]]; then
+		egrep '^#-' "$0"
+		exit
+	fi
+}
+
+function initializecontainer {
+
+	if [[ -z "$*" ]]; then
+		echo "Please specify at least one initialization script !" >&2
+	fi
+
+	INSCRIPTS="$(fetch_scripts "$@" )" || {
+		echo "Config aborted, no changes made." >&2
+		exit 1
+	}
+
+	for inscript in $(splitout "$INSCRIPTS"); do
+		echo "Running $inscript through $CONTAINER" >&2
+		
+		cat "$inscript" | $SUDOCMD lxc-attach -n "$CONTAINER" -- bash
+	done
+}
+
+
+function main {
+	checkhelp "$@"
+	ACTION="$1" ; shift
+
+	case "$ACTION" in
+	list)
+		checklisting "$@"
+		;;
+	esac
+
+	checkhelp "$@"
+	CONTAINER="$1" ; shift
+
+	case "$ACTION" in
+	edit)
+		edittemplate "$@"
+		;;
+	init)
+		initializecontainer "$@"
+		;;
+	config)
+		addtemplates "$@"
+		;;
+	*)
+		echo "Unknown action $ACTION" >&2
+		;;
+	esac
 
 }
 
