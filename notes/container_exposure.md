@@ -12,6 +12,8 @@ The additional comment is useful for finding your port expositions later, both v
 
 Of course, if you are managing the firewall with `firewalld` or `ufw` then directly invoking iptables would NOT be the preferred way to go.
 
+Ref [askUbuntu](http://askubuntu.com/questions/320121/simple-port-forwarding?rq=1)
+
 ## UFW (Uncomplicated Firewall)
 
 Typically for Ubuntu hosts. The following pulled from [StackOverflow](http://askubuntu.com/questions/370599/forward-port-to-lxc-guest-using-ufw#435286)
@@ -26,6 +28,8 @@ Add to the top of the /etc/ufw/before.rules before the *filter (top of file) (pr
 Then edit your `/etc/default/ufw` to use `MANAGE_BUILTINS=yes`
 
 And finally, reload: `ufw reload` (or, `ufw disable && ufw enable`).
+
+It's not yet functional as a solution so... watch [this space](http://askubuntu.com/questions/897775/lxc-port-forward-woes-with-ufw).
 
 ## FirewallD
 
