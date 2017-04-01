@@ -35,9 +35,14 @@
 #
 ###/doc
 
-set -eu
+set -euo pipefail
 
 LASTCONTAINERF=~/.config/lxctl_last
+LASTCONTAINERD="$(dirname "$LASTCONTAINERF")"
+
+if [[ ! -d "$LASTCONTAINERD" ]]; then
+	mkdir -p "$LASTCONTAINERD"
+fi
 
 function printhelp {
 	echo -e "\033[1;35m"
@@ -106,8 +111,11 @@ if [[ -n "$EXTRAOPTS" ]] && [[ ! "$*" =~ $(echo ' -- ') ]]; then
 	XTRATOKEN='--'
 fi
 
-CONTAINER="$1"; shift
-if [[ -z "$CONTAINER" ]] || [[ "$CONTAINER" = '.' ]]; then
+if [[ -n "$*" ]]; then
+	CONTAINER="$1"; shift
+fi
+
+if [[ -z "${CONTAINER:-}" ]] || [[ "${CONTAINER:-}" = '.' ]]; then
 	CONTAINER=$(cat "$LASTCONTAINERF")
 fi
 
