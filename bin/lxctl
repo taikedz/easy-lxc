@@ -87,7 +87,7 @@ case "$ACTION" in
 		exit
 		;;
 	last)
-		if [[ -z "$1" ]]; then
+		if [[ -z "$*" ]]; then
 			cat "$LASTCONTAINERF"
 		else
 			echo "$1" > "$LASTCONTAINERF"
@@ -123,7 +123,7 @@ fi
 	# Print out a copy of the call, for info
 	set -x
 
-	# Do not quote token and opts -- woul be safer to be able to turn them into array ...
+	# Do not quote token and opts -- would be safer to be able to turn them into array ...
 	"$SUDOCMD" "lxc-$ACTION" -n "$CONTAINER" "$@" $XTRATOKEN $EXTRAOPTS
 )
 RES=$?
