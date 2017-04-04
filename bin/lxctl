@@ -83,7 +83,7 @@ EXTRAOPTS=
 # Process actions that do  not take containers
 case "$ACTION" in
 	ls)
-		$SUDOCMD lxc-ls "$@"
+		$SUDOCMD lxc-ls --fancy "$@"
 		exit
 		;;
 	last)
