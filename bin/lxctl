@@ -25,13 +25,35 @@
 #
 # Environment variables:
 #
-#	SUDOCMD - if you explicitly set this to a nil string, the actions will not use sudo
+#	SUDOCMD - if you explicitly set this to an empty string, the actions will not use sudo
 #
-# Special considerations
+#	BACKINGSTORE - defines the backing store used to store data; one of
+#		dir - the default, uses simply a directory
+#			can take the additional option
+#			--dir ROOTFSPATH : the path to the rootfs of the container
 #
-# -- Key Server
-# 	To work around a bug when behind stringent firewalls, any "create -t download" operation is called using a keyserver on port 80
-# 	This is always active. You can override which key server is used by setting DOWNLOAD_KEYSERVER in your environment
+#		best - tries in order btrfs, zfs, lvm, then dir.
+#
+#		btrfs - use a btrfs system backed by the host filesystem's btrfs layer
+#
+#		zfs - use a zfs system backed by the host filesystem's zfs layer
+#
+#		lvm - use a LVM system backed by a LVM block device
+#
+#		loop - use a LVM system, backed by a file representing the filesystem, mounted on the loopback device
+#			takes additional options
+#			--lvname LVNAME : the name of the logical volume to create
+#			--vgname VGNAME : the name of the volume group to use or create
+#			--thinpool THINPOOLNAME : the name of the thinpool to use or create
+#			--fstype FSTYPE : the filesystem to use (default is "ext4")
+#			--fssize FSSIZE : the size of the volume (default is "1G")
+#
+#		(see `man lxc-create` or use the --help option for more information)
+#
+# 	DOWNLOAD_KEYSERVER
+#	 	To work around a bug when behind stringent firewalls, any "create -t download" operation is called using a keyserver on port 80
+#	 	This is always active. You can override which key server is used by setting DOWNLOAD_KEYSERVER in your environment
+#	 	DOWNLOAD_KEYSERVER must be the HKP URL to a keyserver, or remain undefined to use the default.
 #
 ###/doc
 
@@ -70,6 +92,10 @@ fi
 # Elevation prefix
 : ${SUDOCMD=sudo}
 
+# Backingstore option
+: ${BACKINGSTORE=dir}
+BACKINGSTORE="-B $BACKINGSTORE"
+
 # Added options we may want to insert before the extra options
 PREOPTS=
 
@@ -95,6 +121,7 @@ case "$ACTION" in
 		exit
 		;;
 	create)
+		PREOPTS="$PREOPTS $BACKINGSTORE"
 		if [[ "$*" =~ "-t download" ]]; then
 			EXTRAOPTS="$EXTRAOPTS --keyserver $DOWNLOAD_KEYSERVER"
 		fi
@@ -124,7 +151,7 @@ fi
 	set -x
 
 	# Do not quote token and opts -- would be safer to be able to turn them into array ...
-	"$SUDOCMD" "lxc-$ACTION" -n "$CONTAINER" "$@" $XTRATOKEN $EXTRAOPTS
+	"$SUDOCMD" "lxc-$ACTION" -n "$CONTAINER" $PREOPTS "$@" $XTRATOKEN $EXTRAOPTS
 )
 RES=$?
 
