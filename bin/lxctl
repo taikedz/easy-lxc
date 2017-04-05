@@ -48,16 +48,19 @@
 #		zfs - use a zfs system backed by the host filesystem's zfs layer
 #
 #		lvm - use a LVM system backed by a LVM block device
-#
-#		loop - use a LVM system, backed by a file representing the filesystem, mounted on the loopback device
 #			takes additional options
 #			--lvname LVNAME : the name of the logical volume to create
 #			--vgname VGNAME : the name of the volume group to use or create
 #			--thinpool THINPOOLNAME : the name of the thinpool to use or create
+#
+#		loop - use a file representing the filesystem, mounted on the loopback device
+#
+#		lvm and loop
+#			both take additional options
 #			--fstype FSTYPE : the filesystem to use (default is "ext4")
 #			--fssize FSSIZE : the size of the volume (default is "1G")
 #
-#		(see `man lxc-create` or use the --help option for more information)
+#		(see `man lxc-create` or `lxctl create --help` option for more information)
 #
 # 	DOWNLOAD_KEYSERVER
 #	 	To work around a bug when behind stringent firewalls, any "create -t download" operation is called using a keyserver on port 80
