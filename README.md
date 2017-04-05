@@ -20,7 +20,7 @@ As such:
 
 	lxctl ls --fancy
 
-Will display the fancy outptu of `lxc-ls`.
+Will display the fancy output of `lxc-ls`.
 
 ## Additional features
 
@@ -47,6 +47,34 @@ To see or set the last used container, run
 
 	lxctl last
 	lxctl last new-container-name
+
+### Automatic inference of container name
+
+You can optionally type just a substring of a container to use it -- say you have 3 containers
+
+	project
+	project-live
+	project-test
+
+You can run
+
+* `lx attach project` to attach to the "project" container
+* `lx start test` to run the "project-test" container
+
+But you cannot perform any action on a `projec` container - it is neither a strict match, nor does it match a single container name.
+
+Note that this auto-inference does NOT work for `destroy` and `create` commands.
+
+### Defaults
+
+You can set defaults in your `$HOME/.config/lxctl/defaults` file. Each line contains a command followed by a list of options. Use `{}` to signal where the runtime command line arguments should be inserted.
+
+For example, a defaults file with the contents
+
+	create -t download {} -- -a amd64
+	ls --fancy
+
+would cause the download template to always choose amd64 as its architecture, and always cause the `ls` command to list in fancy mode.
 
 ### Explicitly set a key server during `create -t download`
 

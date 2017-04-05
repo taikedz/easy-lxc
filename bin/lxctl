@@ -67,16 +67,35 @@
 #	 	This is always active. You can override which key server is used by setting DOWNLOAD_KEYSERVER in your environment
 #	 	DOWNLOAD_KEYSERVER must be the HKP URL to a keyserver, or remain undefined to use the default.
 #
+# DEFAULTS FILE
+#
+# You can configure default arguments for commands in $HOME/.config/lxctl/defaults
+#
+# The line strucutre for the defaults file is
+#
+# 	command ARUGUMENTS
+#
+# The arguments is a sequence of tokens to be passed, with "{}" denoting where the command line arguments passed at runtime should be inserted.
+#
+# For example
+#
+# 	create -t download {} -- -t ubuntu -a amd64
+#
+# This causes any create command passed without any arguments to by default select the download template, and specify the distro and architecture.
+#
 ###/doc
 
 set -euo pipefail
 
-LASTCONTAINERF=~/.config/lxctl_last
-LASTCONTAINERD="$(dirname "$LASTCONTAINERF")"
+LXCONFIGDIR="$HOME/.config/lxctl"
+LASTCONTAINERF="$LXCONFIGDIR/last"
+LXDEFAULTSFILE="$LXCONFIGDIR/defaults"
 
-if [[ ! -d "$LASTCONTAINERD" ]]; then
-	mkdir -p "$LASTCONTAINERD"
+if [[ ! -d "$LXCONFIGDIR" ]]; then
+	mkdir -p "$LXCONFIGDIR"
 fi
+
+touch "$LXDEFAULTSFILE"
 
 function printhelp {
 	echo -e "\033[1;35m"
@@ -94,6 +113,32 @@ function faile {
 	exit
 }
 
+function getcontainer {
+	local clist="$($SUDOCMD lxc-ls |sed -r 's/\s+/\n/g'| grep "$1")"
+	if [[ "$(echo "$clist"|wc -l|cut -d' ' -f1)" != 1 ]]; then
+		echo "[33m$clist[0m" >&2
+		# Must have only one result, else return the input itself
+		echo "$1"
+	else
+		echo "$clist"
+	fi
+}
+
+function readdeffile {
+	local defline="$(grep -P "^$1\s" "$LXDEFAULTSFILE"|tail -n 1)"
+	echo "${defline/$1/}" | tee /dev/stderr
+}
+
+function getpreargs {
+	echo "$1"|sed -r 's/\{\}.*$//'
+}
+
+function getpostargs {
+	if [[ "$1" =~ \{\} ]]; then
+		echo "$1"|sed -r 's/^.*\{\}//'
+	fi
+}
+
 ACTION="$1"; shift
 
 if [[ "$*" =~ --help ]]; then
@@ -108,22 +153,22 @@ fi
 : ${BACKINGSTORE=dir}
 BACKINGSTORE="-B $BACKINGSTORE"
 
+## Internal general options
 # Added options we may want to insert before the extra options
 PREOPTS=
-
 # Set the indicator that says hey there are extended options
 XTRATOKEN=
 # Placeholder for extended options
 EXTRAOPTS=
 
+## User-defined general options
+DEFAULTS="$(readdeffile "$ACTION")"
+PREARGS="$(getpreargs "$DEFAULTS")"
+POSTARGS="$(getpostargs "$DEFAULTS")"
 : ${DOWNLOAD_KEYSERVER="hkp://p80.pool.sks-keyservers.net:80"}
 
 # Process actions that do  not take containers
 case "$ACTION" in
-	ls)
-		$SUDOCMD lxc-ls --fancy "$@"
-		exit
-		;;
 	last)
 		if [[ -z "$*" ]]; then
 			cat "$LASTCONTAINERF"
@@ -143,17 +188,6 @@ esac
 if ! which "lxc-$ACTION" 2>/dev/null >/dev/null ; then
 	faile "No such action lxc-$ACTION"
 fi
-
-function getcontainer {
-	local clist="$($SUDOCMD lxc-ls |sed -r 's/\s+/\n/g'| grep "$1")"
-	if [[ "$(echo "$clist"|wc -l|cut -d' ' -f1)" != 1 ]]; then
-		echo "[33m$clist[0m" >&2
-		# Must have only one result, else return the input itself
-		echo "$1"
-	else
-		echo "$clist"
-	fi
-}
 
 # Add our own token if one does not already exist in the user's args
 if [[ -n "$EXTRAOPTS" ]] && [[ ! "$*" =~ $(echo ' -- ') ]]; then
@@ -176,7 +210,7 @@ fi
 	set -x
 
 	# Do not quote token and opts -- would be safer to be able to turn them into array ...
-	"$SUDOCMD" "lxc-$ACTION" -n "$CONTAINER" $PREOPTS "$@" $XTRATOKEN $EXTRAOPTS
+	"$SUDOCMD" "lxc-$ACTION" -n "$CONTAINER" $PREOPTS $PREARGS "$@" $POSTARGS $XTRATOKEN $EXTRAOPTS
 )
 RES=$?
 
