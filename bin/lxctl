@@ -21,6 +21,15 @@
 #
 # You can use "." as the name of a container to specifically use the last-used container.
 #
+# You can type a partial container name too for example if you have two containers "myapp" and "myapp-live",
+# you can type
+#
+#   lx info live
+#
+# to automatically select the live app. If you use the name "app", it will match neither, and attempt to give you info on
+# a container exactly named "app". This works for all commands except "create" and "destroy".
+#
+#
 # The list of actions in the first example are a subset - the real subset is in fact any command in the lxc-* family.
 #
 # Environment variables:
@@ -132,6 +141,16 @@ if ! which "lxc-$ACTION" 2>/dev/null >/dev/null ; then
 	faile "No such action lxc-$ACTION"
 fi
 
+function getcontainer {
+	local clist="$($SUDOCMD lxc-ls |sed -r 's/\s+/\n/g'| grep "$1")"
+	if [[ "$(echo "$clist"|wc -l|cut -d' ' -f1)" != 1 ]]; then
+		echo "[33m$clist[0m" >&2
+		# Must have only one result, else return the input itself
+		echo "$1"
+	else
+		echo "$clist"
+	fi
+}
 
 # Add our own token if one does not already exist in the user's args
 if [[ -n "$EXTRAOPTS" ]] && [[ ! "$*" =~ $(echo ' -- ') ]]; then
@@ -140,6 +159,9 @@ fi
 
 if [[ -n "$*" ]]; then
 	CONTAINER="$1"; shift
+	if [[ "$ACTION" != create ]] && [[ "$ACTION" != destroy ]]; then
+		CONTAINER="$(getcontainer "$CONTAINER")"
+	fi
 fi
 
 if [[ -z "${CONTAINER:-}" ]] || [[ "${CONTAINER:-}" = '.' ]]; then
