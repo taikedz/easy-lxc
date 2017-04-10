@@ -139,6 +139,16 @@ function getpostargs {
 	fi
 }
 
+function getlastcontainer {
+	if [[ -f "$LASTCONTAINERF" ]]; then
+		cat "$LASTCONTAINERF"
+	fi
+}
+
+function setlastcontainer {
+	echo "$1" > "$LASTCONTAINERF"
+}
+
 ACTION="$1"; shift
 
 if [[ "$*" =~ --help ]]; then
@@ -176,9 +186,9 @@ POSTARGS="$(getpostargs "$DEFAULTS")"
 case "$ACTION" in
 	last)
 		if [[ -z "$*" ]]; then
-			cat "$LASTCONTAINERF"
+			getlastcontainer
 		else
-			echo "$1" > "$LASTCONTAINERF"
+			setlastcontainer "$1"
 		fi
 		exit
 		;;
@@ -207,7 +217,7 @@ if [[ -n "$*" ]]; then
 fi
 
 if [[ -z "${CONTAINER:-}" ]] || [[ "${CONTAINER:-}" = '.' ]]; then
-	CONTAINER=$(cat "$LASTCONTAINERF")
+	CONTAINER="$(getlastcontainer)"
 fi
 
 (
