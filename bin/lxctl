@@ -149,6 +149,11 @@ fi
 # Elevation prefix
 : ${SUDOCMD=sudo}
 
+: ${ROOTHOME=}
+if [[ -n "$SUDOCMD" ]]; then
+	: ${ROOTHOME=/root}
+fi
+
 # Backingstore option
 : ${BACKINGSTORE=dir}
 BACKINGSTORE="-B $BACKINGSTORE"
@@ -210,7 +215,7 @@ fi
 	set -x
 
 	# Do not quote token and opts -- would be safer to be able to turn them into array ...
-	"$SUDOCMD" "lxc-$ACTION" -n "$CONTAINER" $PREOPTS $PREARGS "$@" $POSTARGS $XTRATOKEN $EXTRAOPTS
+	"$SUDOCMD" HOME="$ROOTHOME" "lxc-$ACTION" -n "$CONTAINER" $PREOPTS $PREARGS "$@" $POSTARGS $XTRATOKEN $EXTRAOPTS
 )
 RES=$?
 
