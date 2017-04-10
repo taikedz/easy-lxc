@@ -213,11 +213,17 @@ if [[ -n "$*" ]]; then
 	CONTAINER="$1"; shift
 	if [[ "$ACTION" != create ]] && [[ "$ACTION" != destroy ]]; then
 		CONTAINER="$(getcontainer "$CONTAINER")"
+	elif [[ -z "$CONTAINER" ]]; then
+		faile "You must explicitly specify a container !"
 	fi
 fi
 
 if [[ -z "${CONTAINER:-}" ]] || [[ "${CONTAINER:-}" = '.' ]]; then
 	CONTAINER="$(getlastcontainer)"
+
+	if [[ -z "$CONTAINER" ]] && [[ "$ACTION" ! =~ $(echo 'ls|top') ]]; then
+		faile "You must explicitly specify a container !"
+	fi
 fi
 
 (
