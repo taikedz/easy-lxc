@@ -126,7 +126,7 @@ function getcontainer {
 
 function readdeffile {
 	local defline="$(grep -P "^$1\s" "$LXDEFAULTSFILE"|tail -n 1)"
-	echo "${defline/$1/}" | tee /dev/stderr
+	echo "${defline/$1/}" # | tee /dev/stderr
 }
 
 function getpreargs {
@@ -159,9 +159,9 @@ fi
 # Elevation prefix
 : ${SUDOCMD=sudo}
 
-: ${ROOTHOME=}
-if [[ -n "$SUDOCMD" ]]; then
-	: ${ROOTHOME=/root}
+: ${ROOTHOME=/root}
+if [[ -z "$SUDOCMD" ]]; then
+	ROOTHOME="$HOME"
 fi
 
 # Backingstore option
@@ -221,7 +221,7 @@ fi
 if [[ -z "${CONTAINER:-}" ]] || [[ "${CONTAINER:-}" = '.' ]]; then
 	CONTAINER="$(getlastcontainer)"
 
-	if [[ -z "$CONTAINER" ]] && [[ "$ACTION" ! =~ $(echo 'ls|top') ]]; then
+	if [[ -z "$CONTAINER" ]] && [[ ! "$ACTION" =~ $(echo 'ls|top') ]]; then
 		faile "You must explicitly specify a container !"
 	fi
 fi
