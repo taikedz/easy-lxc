@@ -12,15 +12,15 @@ Features:
 
 ## Usage
 
-	lxctl ACTION [ CONTAINER [ OPTIONS ] ]
+	lx ACTION [ CONTAINER [ OPTIONS ] ]
 
 Most actions are mapped to their `lxc-$ACTION` equivalent, and given the arguments
 
 As such:
 
-	lxctl ls --fancy
+	lx ls --running
 
-Will display the fancy output of `lxc-ls`.
+will display specifically the running containers.
 
 ## Additional features
 
@@ -28,25 +28,28 @@ Still to do - port exposition. In the meantime, see notes in [exposing a contain
 
 ### Remember the last used container
 
-You can run `lxctl` without specifying container or options. To provide options to the subsequent commands, you can also simply specify "." in lieu of the current container.
+You can run `lx` without specifying container or options. To provide options to the subsequent commands, you can also simply specify "." in lieu of the current container.
 
-	lxctl create testcontainer -t ubuntu
-	lxctl start
-	lxctl attach . -- apt install openssh-server
-	lxctl attach . -- ip a
+	lx create testcontainer -t ubuntu
+	lx start
+	lx attach . -- apt install openssh-server
+	lx attach . -- ip a
 	ssh $CONTAINERIP
 
 	    .... you do stuff in the container .....
 	
-	lxctl stop
-	lxctl destroy
+	lx stop
+	lx destroy
 
 Note that we only specified the container name in the first instance; the rest use the same container implicitly.
 
-To see or set the last used container, run
+To see last used container, run
 
-	lxctl last
-	lxctl last new-container-name
+	lx last
+
+To set last used container, run
+
+	lx last new-container-name
 
 ### Automatic inference of container name
 
@@ -78,11 +81,9 @@ would cause the download template to always choose amd64 as its architecture, an
 
 ### Explicitly set a key server during `create -t download`
 
-The download template has a defect in that it tries to query a key server on a non-officialized port.
+The download template has a defect in that it tries to query a key server on a non-officialized [1] port.
 
-This is problematic when on a corporate LAN behind a firewall that restricts outgoing requests. When the use of the `download` template is detected, `lxctl` will attempt to fix the keyserver URL by explicitly passing the request to `hkp://p80.pool.sks-keyservers.com:80`. You can override this in your environment by setting the `DOWNLOAD_KEYSERVER` variable. This has been merged upstream [3]
+For this reason, a keyserver is pre-configured in the defaults file.
 
 * [1] [https://tools.ietf.org/html/draft-shaw-openpgp-hkp-00](https://tools.ietf.org/html/draft-shaw-openpgp-hkp-00)
-* [2] [notes/gpg_hang_lxc_create.md](notes/gpg_hang_lxc_create.md)
-* [3] [https://github.com/lxc/lxc/pull/1473](https://github.com/lxc/lxc/pull/1473)
 

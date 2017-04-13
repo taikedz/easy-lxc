@@ -7,17 +7,17 @@
 # sudo unless explicitly switched off.
 #
 #
-#	[ SUDOCMD=[sudo] ] lxctl { create | destroy | start | stop } [ { CONTAINER | "." } [ OPTIONS ] ]
-#
-#	[ SUDOCMD=[sudo] ] lxctl ls OPTIONS
+#	[ SUDOCMD=[sudo] ] lxctl COMMAND [ { CONTAINER | "." } [ OPTIONS ] ]
 #
 #	lxctl last [ CONTAINER ]
 #
 #
-# Calls the appropriate LXC action on the specified container. If CONTAINER is not specified, lxctl will attempt to use the last
-# explicitly specified container.
+# Calls the appropriate LXC action on the specified container. If CONTAINER is not specified or is '.', lxctl will attempt to use
+# the last explicitly specified container.
 #
-# You can call `lxctl last` to see the container, or provide a container name to set the container.
+# COMMAND is any command in the lxc-* family.
+#
+# You can call `lxctl last` to see the last used container, or provide a container name to set the container.
 #
 # You can use "." as the name of a container to specifically use the last-used container.
 #
@@ -29,43 +29,9 @@
 # to automatically select the live app. If you use the name "app", it will match neither, and attempt to give you info on
 # a container exactly named "app". This works for all commands except "create" and "destroy".
 #
-#
-# The list of actions in the first example are a subset - the real subset is in fact any command in the lxc-* family.
-#
 # Environment variables:
 #
 #	SUDOCMD - if you explicitly set this to an empty string, the actions will not use sudo
-#
-#	BACKINGSTORE - defines the backing store used to store data; one of
-#		dir - the default, uses simply a directory
-#			can take the additional option
-#			--dir ROOTFSPATH : the path to the rootfs of the container
-#
-#		best - tries in order btrfs, zfs, lvm, then dir.
-#
-#		btrfs - use a btrfs system backed by the host filesystem's btrfs layer
-#
-#		zfs - use a zfs system backed by the host filesystem's zfs layer
-#
-#		lvm - use a LVM system backed by a LVM block device
-#			takes additional options
-#			--lvname LVNAME : the name of the logical volume to create
-#			--vgname VGNAME : the name of the volume group to use or create
-#			--thinpool THINPOOLNAME : the name of the thinpool to use or create
-#
-#		loop - use a file representing the filesystem, mounted on the loopback device
-#
-#		lvm and loop
-#			both take additional options
-#			--fstype FSTYPE : the filesystem to use (default is "ext4")
-#			--fssize FSSIZE : the size of the volume (default is "1G")
-#
-#		(see `man lxc-create` or `lxctl create --help` option for more information)
-#
-# 	DOWNLOAD_KEYSERVER
-#	 	To work around a bug when behind stringent firewalls, any "create -t download" operation is called using a keyserver on port 80
-#	 	This is always active. You can override which key server is used by setting DOWNLOAD_KEYSERVER in your environment
-#	 	DOWNLOAD_KEYSERVER must be the HKP URL to a keyserver, or remain undefined to use the default.
 #
 # DEFAULTS FILE
 #
@@ -95,7 +61,13 @@ if [[ ! -d "$LXCONFIGDIR" ]]; then
 	mkdir -p "$LXCONFIGDIR"
 fi
 
-touch "$LXDEFAULTSFILE"
+if [[ ! -f "$LXDEFAULTSFILE" ]]; then
+	echo -e 'ls --fancy\ncreate {} -- --keyserver hkp://keyserver.ubuntu.com:80' > "$LXDEFAULTSFILE"
+fi
+
+if [[ ! -f "$LASTCONTAINERF" ]]; then
+	echo '.' > "$LASTCONTAINERF"
+fi
 
 function printhelp {
 	echo -e "\033[1;35m"
@@ -164,23 +136,15 @@ if [[ -z "$SUDOCMD" ]]; then
 	ROOTHOME="$HOME"
 fi
 
-# Backingstore option
-: ${BACKINGSTORE=dir}
-BACKINGSTORE="-B $BACKINGSTORE"
-
 ## Internal general options
-# Added options we may want to insert before the extra options
+# Added options we may want to insert before the user options
 PREOPTS=
-# Set the indicator that says hey there are extended options
-XTRATOKEN=
 # Placeholder for extended options
-EXTRAOPTS=
 
 ## User-defined general options
 DEFAULTS="$(readdeffile "$ACTION")"
 PREARGS="$(getpreargs "$DEFAULTS")"
 POSTARGS="$(getpostargs "$DEFAULTS")"
-: ${DOWNLOAD_KEYSERVER="hkp://p80.pool.sks-keyservers.net:80"}
 
 # Process actions that do  not take containers
 case "$ACTION" in
@@ -192,21 +156,10 @@ case "$ACTION" in
 		fi
 		exit
 		;;
-	create)
-		PREOPTS="$PREOPTS $BACKINGSTORE"
-		if [[ "$*" =~ "-t download" ]]; then
-			EXTRAOPTS="$EXTRAOPTS --keyserver $DOWNLOAD_KEYSERVER"
-		fi
-		;;
 esac
 
 if ! which "lxc-$ACTION" 2>/dev/null >/dev/null ; then
 	faile "No such action lxc-$ACTION"
-fi
-
-# Add our own token if one does not already exist in the user's args
-if [[ -n "$EXTRAOPTS" ]] && [[ ! "$*" =~ $(echo ' -- ') ]]; then
-	XTRATOKEN='--'
 fi
 
 if [[ -n "$*" ]]; then
@@ -231,7 +184,7 @@ fi
 	set -x
 
 	# Do not quote token and opts -- would be safer to be able to turn them into array ...
-	"$SUDOCMD" HOME="$ROOTHOME" "lxc-$ACTION" -n "$CONTAINER" $PREOPTS $PREARGS "$@" $POSTARGS $XTRATOKEN $EXTRAOPTS
+	"$SUDOCMD" HOME="$ROOTHOME" "lxc-$ACTION" -n "$CONTAINER" $PREOPTS $PREARGS "$@" $POSTARGS
 )
 RES=$?
 

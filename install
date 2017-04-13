@@ -6,23 +6,6 @@
 }
 
 mkdir -p /usr/local/bin
-cp bin/lxctl /usr/local/bin/lxctl
-chmod 755 /usr/local/bin/lxctl
+cp bin/lx /usr/local/bin/lx
+chmod 755 /usr/local/bin/lx
 
-echo "lxctl is now setup. Rename/Link to 'lx' (or Skip) ?"
-read -p "r/l/S> "
-
-case "$REPLY" in
-r)
-	mv /usr/local/bin/lxctl /usr/local/bin/lx
-	;;
-l)
-	ln -s /usr/local/bin/lxctl /usr/local/bin/lx
-	;;
-s)
-	:
-	;;
-*)
-	echo "Invalid option. Left 'lxctl' in place."
-	;;
-esac
