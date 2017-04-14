@@ -10,6 +10,13 @@ Features:
 * implicitly filling-in the container in simple situations
 * automatically using sudo unless explicitly switched off.
 
+## Installation
+
+	git clone https://github.com/taikedz/easy-lxc
+	cd easy-lxc
+	git checkout v2.1
+	sudo ./install
+
 ## Usage
 
 	lx ACTION [ CONTAINER [ OPTIONS ] ]
