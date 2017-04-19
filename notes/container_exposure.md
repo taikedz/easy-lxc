@@ -21,6 +21,27 @@ To do the actual host-guest forwarding, you then need to add a rule to your ipta
 
 The additional comment is useful for finding your port expositions later, both visually and programmatically, so you can modify/delete them.
 
+## Very Easy Firewall
+
+The Very Easy Firewall was created specifically with containers in mind !
+
+[https://taikedz.gitlab.net/taikedz/vefirewall](https://taikedz.gitlab.net/taikedz/vefirewall)
+
+After installing, do
+
+    sudo vef load lxc
+    sudo vef edit rawpost
+
+Adapt the example as required, save, and then
+
+    #Optionally save your modifications
+    #sudo vef save lxc
+    
+    # And apply
+    sudo vef apply
+
+Now you should be able to reach the container on the expected port !
+
 ## UFW (Uncomplicated Firewall)
 
 You need to ensure the following is applied in UFW (presuming you are exposing your container's port 80 to your host's port 8080 on the eth0 interface):
@@ -51,8 +72,9 @@ At the top of `/etc/ufw/after.rules`, before the `*filter` section
 	-A POSTROUTING -s 10.0.3.0/24 ! -d 10.0.3.0/24 -j MASQUERADE
 	COMMIT
 
-
 And finally, reload: `ufw reload` (or, `ufw disable && ufw enable`).
+
+Unfotunately, there are still possiblities of defective working with this method. Debugging ufw rules and chains is not a light matter.
 
 ## FirewallD
 
