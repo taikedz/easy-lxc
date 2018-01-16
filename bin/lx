@@ -7,17 +7,17 @@
 # sudo unless explicitly switched off.
 #
 #
-#	[ SUDOCMD=[sudo] ] lxctl COMMAND [ { CONTAINER | "." } [ OPTIONS ] ]
+#	[ SUDOCMD=[sudo] ] lx COMMAND [ { CONTAINER | "." } [ OPTIONS ] ]
 #
-#	lxctl last [ CONTAINER ]
+#	lx last [ CONTAINER ]
 #
 #
-# Calls the appropriate LXC action on the specified container. If CONTAINER is not specified or is '.', lxctl will attempt to use
+# Calls the appropriate LXC action on the specified container. If CONTAINER is not specified or is '.', lx will attempt to use
 # the last explicitly specified container.
 #
 # COMMAND is any command in the lxc-* family.
 #
-# You can call `lxctl last` to see the last used container, or provide a container name to set the container.
+# You can call `lx last` to see the last used container, or provide a container name to set the container.
 #
 # You can use "." as the name of a container to specifically use the last-used container.
 #
@@ -48,6 +48,18 @@
 # 	create -t download {} -- -t ubuntu -a amd64
 #
 # This causes any create command passed without any arguments to by default select the download template, and specify the distro and architecture.
+#
+# Example commands:
+#
+# 	lx create my-container -t download
+#
+# 	lx ls
+# 	lx last
+#
+# 	lx start my
+# 	lx stop my
+#
+# 	lx destroy my-container
 #
 ###/doc
 
